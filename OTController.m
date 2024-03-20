@@ -29,6 +29,12 @@ classdef OTController < handle
         end
 
         %% connection
+        function callback_camera_select(obj,~,~)
+           name = obj.hOTView.GUI.camera_popmenu.String(obj.hOTView.GUI.camera_popmenu.Value);
+           obj.hOTmodel.select_camera(name);
+           set(obj.hOTView.GUI.camera_connect,'Enable','on');
+        end
+        
         function callback_camera_connect(obj,~,~)
             if obj.hOTView.GUI.camera_connect.Value == 1
                 camera = obj.hOTmodel.connect_to_cam;
@@ -171,15 +177,15 @@ classdef OTController < handle
                 obj.enable_scanner('on');
             end
         end
+
+        function callback_scanner_velocity(obj,~,~)
+            v = str2double(obj.hOTView.GUI.scanner_velocity.String);
+            obj.hOTmodel.getvelocity(v);
+        end
         
-%         
-%         function callback_scanner_velocity(obj,~,~)
-%             
-%         end
-%         
-%         function callback_scanpath_mode(obj,~,~)
-%             
-%         end
+        function callback_scanpath_mode(obj,~,~)
+            obj.hOTmodel.getMode(obj.hOTView.GUI.scanner_velocity.String);
+        end
 %         
 %         function callback_scanpath(obj,~,~)
 %             

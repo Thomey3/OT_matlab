@@ -9,10 +9,13 @@ classdef OTModel < handle
         ROIheight = 2048
         % DAQ
         DAQ
-        w % 
+        velocity
+        % 电压-坐标
+        w 
         center
         curve1
         curve2
+        
         
         % information
         logMessage = cell(0,0)
@@ -26,22 +29,28 @@ classdef OTModel < handle
     methods
         % 连接相机
         function select_camera(obj,name)
-            obj.cam.camName = name;
+            obj.cam.camName = name{1,1};
+            obj.addlog([' Camera : ',obj.cam.camName]);
         end
 
         function bool = connect_to_cam(obj)
-            try
-                if(strcmp(obj.cam.camName,'Daheng'))
-                    obj.cam.camera = videoinput('winvideo', 1, 'RGB24_1280x1024');
-                elseif(strcmp(obj.cam.camName,'PCO'))
-                    obj.cam.camera = videoinput("pcocameraadaptor_r2022b", 0, "USB 3.1 Gen 1");
-                end
-                obj.cam.camerasrc = getselectedsource(obj.cam.camera);
-                bool = true;
-                obj.addlog(' Camera connected');
-            catch
+            if(~isfield(obj.cam,'camName'))
+                obj.addlog('Camera not selected');
                 bool = false;
-                obj.addlog(' Camera connection failed');
+            else
+                try
+                    if(strcmp(obj.cam.camName,'Daheng'))
+                        obj.cam.camera = videoinput('winvideo', 1, 'RGB24_1280x1024');
+                    elseif(strcmp(obj.cam.camName,'PCO'))
+                        obj.cam.camera = videoinput("pcocameraadaptor_r2022b", 0, "USB 3.1 Gen 1");
+                    end
+                    obj.cam.camerasrc = getselectedsource(obj.cam.camera);
+                    bool = true;
+                    obj.addlog(' Camera connected');
+                catch
+                    bool = false;
+                    obj.addlog(' Camera connection failed');
+                end
             end
         end
         % 断开相机
@@ -317,6 +326,11 @@ classdef OTModel < handle
                 obj.addlog('calibrate failed');
             end
         end
+        % velocity (这里可以尝试一下让他在扫的时候可以直接调整)
+        function getvelocity(obj,v)
+            obj.velocity = v;
+        end
+        % 
     end
     
     %% 功能类函数

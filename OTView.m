@@ -62,7 +62,7 @@ classdef OTView < most.Gui
             %相机连接
             camera_connectFlow = most.gui.uiflowcontainer('Parent', connectionFlow,'FlowDirection','RightToLeft');
             obj.GUI.camera_connect = uicontrol('Parent',camera_connectFlow,'Style','checkbox','String','connect', ...
-                'FontSize',14);
+                'FontSize',14,'Enable','off');
             obj.GUI.camera_popmenu = uicontrol('Parent',camera_connectFlow,'Style','popupmenu',...
                 'String',{'PCO','Daheng'});
             set(camera_connectFlow,'HeightLimits',[25,25]);
@@ -223,6 +223,8 @@ classdef OTView < most.Gui
 
             
            %% connection
+           
+            set(obj.GUI.camera_popmenu,'callback',@controller.callback_camera_select);
             set(obj.GUI.camera_connect,'callback',@controller.callback_camera_connect);
             set(obj.GUI.scanner_connect,'callback',@controller.callback_scanner_connect);
            
