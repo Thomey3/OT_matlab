@@ -7,6 +7,7 @@ classdef OTController < handle
     
     properties
         living = false
+        scanner_connect = false
         autocontrast = true
         width = 2048
         height = 2048
@@ -21,7 +22,7 @@ classdef OTController < handle
 
     methods
         function callback_DeleteFcn(obj,~,~)
-            if ~isempty(obj.hOTmodel.cam) || ~isempty(obj.hOTmodel.daq)
+            if ~isempty(obj.hOTmodel.cam) || ~isempty(obj.hOTmodel.DAQ)
                 obj.hOTmodel.disconnect_cam;
                 obj.hOTmodel.disconnect_daq;
             end
@@ -47,12 +48,17 @@ classdef OTController < handle
                 DAQ = obj.hOTmodel.connect_daq;
                 if DAQ ==true
                     obj.enable_scanner('on');
+                    obj.scanner_connect = true;
+                    if obj.living == true
+                        set(obj.hOTView.GUI.calibration,'Enable','on');
+                    end
                 else
                     obj.hOTView.GUI.scanner_connect.Value = 0;
                 end
             else
                 obj.hOTmodel.disconnect_daq;
                 obj.enable_scanner('off');
+                obj.scanner_connect = false;
             end
         end
         % 使能camera config区域
@@ -72,7 +78,7 @@ classdef OTController < handle
         
         % 使能scanner config区域
         function enable_scanner(obj,on_or_off)
-            set(obj.hOTView.GUI.calibration,'Enable',on_or_off);
+            %set(obj.hOTView.GUI.calibration,'Enable',on_or_off);
             set(obj.hOTView.GUI.scanner_velocity,'Enable',on_or_off);
             set(obj.hOTView.GUI.scanpath_mode,'Enable',on_or_off);
             set(obj.hOTView.GUI.scanpath,'Enable',on_or_off);
@@ -93,6 +99,9 @@ classdef OTController < handle
                 if preview == true
                     obj.living = true;
                     set(obj.hOTView.GUI.Live,'String','Stop Live');
+                    if obj.scanner_connect == true
+                        set(obj.hOTView.GUI.calibration,'Enable','on');
+                    end
                 end          
             else
                 stop_preview = obj.hOTmodel.stop_preview;
@@ -203,3 +212,4 @@ classdef OTController < handle
 %         function callback_reset(obj,~,~)
 %             
 %         end
+end
