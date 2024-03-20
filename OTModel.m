@@ -11,6 +11,9 @@ classdef OTModel < handle
         DAQ
         velocity
         mode
+        path
+        interval
+        scanmode
         % µçÑ¹-×ø±ê
         w 
         center
@@ -334,6 +337,15 @@ classdef OTModel < handle
         % mode
         function getMode(obj,mode)
            obj.mode = mode{1,1}; 
+        end
+        function getScanpath(obj,path)
+           obj.path = path{1,1}; 
+        end
+        function getInterval(obj,interval)
+           obj.interval = interval; 
+        end
+        function getScanmode(obj,scanmode)
+           obj.scanmode = scanmode{1,1}; 
         end
     end
     

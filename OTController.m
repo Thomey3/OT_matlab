@@ -186,18 +186,18 @@ classdef OTController < handle
         function callback_scanpath_mode(obj,~,~)
             obj.hOTmodel.getMode(obj.hOTView.GUI.scanner_velocity.String(obj.hOTView.GUI.scanner_velocity.Value));
         end
-%         
-%         function callback_scanpath(obj,~,~)
-%             
-%         end
-%         
-%         function callback_interval(obj,~,~)
-%             
-%         end
-%         
-%         function callback_scanmode(obj,~,~)
-%             
-%         end
+        
+        function callback_scanpath(obj,~,~)
+            obj.hOTmodel.getScanpath(obj.hOTView.GUI.scanpath.String(obj.hOTView.GUI.scanpath.Value));
+        end
+        
+        function callback_interval(obj,~,~)
+            obj.hOTmodel.getInterval(str2double(obj.hOTView.GUI.interval.String));
+        end
+        
+        function callback_scanmode(obj,~,~)
+            obj.hOTmodel.getScanmode(obj.hOTView.GUI.scanmode.String(obj.hOTView.GUI.scanmode.Value));
+        end
 %         
 %         function callback_addpath(obj,~,~)
 %             
