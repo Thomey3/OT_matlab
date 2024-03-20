@@ -200,16 +200,16 @@ classdef OTController < handle
         end
         
         function callback_addpath(obj,~,~)
-            
+            obj.hOTmodel.addpath(obj.hOTView.GUI.ViewAxes);
         end
-%         
-%         function callback_finish(obj,~,~)
-%             
-%         end
-%         
-%         function callback_delete(obj,~,~)
-%             
-%         end
+        
+        function callback_finish(obj,~,~)
+            obj.hOTmodel.Finish;
+        end
+        
+        function callback_delete(obj,~,~)
+            obj.hOTmodel.Delete;
+        end
 %         
 %         function callback_scan_startpoint(obj,~,~)
 %             

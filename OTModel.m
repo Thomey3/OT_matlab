@@ -441,6 +441,41 @@ classdef OTModel < handle
                 obj.OTPath_inf.number = size(obj.Path,2);
                 obj.OTPath_inf.method = [obj.OTPath_inf.method,method_num];
         end
+        % finish 
+        function Finish(obj)
+            if ~isempty(obj.multiple_position_x)
+                num1 = size(obj.multiple_position_x,1);
+                num2 = size(obj.multiple_position_x,2);
+                C = zeros(1,num1 * num2);
+                D = zeros(1,num1 * num2);
+                for i = 1:1:num2
+                   C(i:num2:end) =  obj.multiple_position_x(:,i);
+                   D(i:num2:end) =  obj.multiple_position_y(:,i);
+                   point = [obj.multiple_position_x(1,i),obj.multiple_position_y(1,i)];
+                   obj.hOTSP = [obj.hOTSP;point];
+                end
+                multiple_position = [C;D];
+                obj.hOTROI = [obj.hOTROI;multiple_position'];
+                obj.multiple_position_x = [];
+                obj.multiple_position_y = [];
+                obj.lenth = num1 * num2;
+                obj.OTPath_inf.lenth = [obj.OTPath_inf.lenth,obj.lenth];
+                obj.OTPath_inf.method = [obj.OTPath_inf.method,3];
+            else
+                obj.addlog('multiple_position is empty');
+            end
+        end
+        % Delete
+        function Delete(obj)
+           obj.hOTROI = [];
+           obj.hOTSP = [];
+           delete(obj.Path);
+           obj.Path = [];
+           obj.OTPath_inf = struct('number',[],'lenth',[],'method',[]);
+           obj.multiple_position_x = [];
+           obj.multiple_position_y = [];
+           obj.addlog('Deleting Path ...');
+        end
     end
     
     %% 功能类函数
