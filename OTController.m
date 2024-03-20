@@ -47,7 +47,6 @@ classdef OTController < handle
             if obj.hOTView.GUI.scanner_connect.Value == 1
                 DAQ = obj.hOTmodel.connect_daq;
                 if DAQ ==true
-                    obj.enable_scanner('on');
                     obj.scanner_connect = true;
                     if obj.living == true
                         set(obj.hOTView.GUI.calibration,'Enable','on');
@@ -165,9 +164,14 @@ classdef OTController < handle
 %         end
         
         %% scanner controller
-%         function callback_calibration(obj,~,~)
-%             
-%         end
+   methods
+        function callback_calibration(obj,~,~)
+            calibrate = obj.hOTmodel.calibration;
+            if calibrate == true
+                obj.enable_scanner('on');
+            end
+        end
+        
 %         
 %         function callback_scanner_velocity(obj,~,~)
 %             
@@ -212,4 +216,5 @@ classdef OTController < handle
 %         function callback_reset(obj,~,~)
 %             
 %         end
+   end
 end

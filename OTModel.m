@@ -9,6 +9,10 @@ classdef OTModel < handle
         ROIheight = 2048
         % DAQ
         DAQ
+        w % 
+        center
+        curve1
+        curve2
         
         % information
         logMessage = cell(0,0)
@@ -58,6 +62,8 @@ classdef OTModel < handle
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
                 bool = true;
                 obj.addlog(' DAQ connected');
+                obj.addlog(' Calibration requires camera living');
+                obj.addlog(' You should calibrate before using scanner');
             catch
                 bool = false;
                 obj.addlog(' DAQ connect failed');
@@ -169,6 +175,150 @@ classdef OTModel < handle
             obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
         end
     end
+    
+    %% scanner config
+    methods
+        % 获取calibration需要的光斑位置照片
+        function s = CaliImgAcqui(obj)
+            dq = obj.DAQ;
+            ca = obj.cam.camera;
+
+            if(strcmp(obj.cam.camName,'Daheng'))
+                xframenumber = 6;
+                yframenumber = 6;
+                xpixel = 1280;
+                ypixel = 1024;
+            elseif(strcmp(obj.cam.camName,'PCO'))
+                xframenumber = 20;
+                yframenumber = 20;
+                xpixel = obj.ROIheight;
+                ypixel = obj.ROIwidth;
+            end
+            %% Image Acquisition
+            ximgstack = uint8(ones(ypixel,xpixel,3,xframenumber));
+            yimgstack = uint8(ones(ypixel,xpixel,3,yframenumber));
+
+            if(strcmp(obj.cam.camName,'Daheng'))
+                for i=1:xframenumber+1 %calibrate toward x direction
+                    write(dq,[0.1*(i-1),0]);
+                    pause(0.5)
+                    a = getsnapshot(ca);
+                    ximgstack(:,:,:,i) = a;
+                    fprintf('x axis = %d\n',i)
+                end
+            elseif(strcmp(obj.cam.camName,'PCO'))
+                for i=1:xframenumber+1 %calibrate toward x direction
+                    write(dq,[0.1*(i-xframenumber/2)*xpixel/2048,0]);  %改了一下比例
+                    pause(0.5)
+                    a = floor(getsnapshot(ca)/256);
+                    ximgstack(:,:,1,i) = a;
+                    ximgstack(:,:,2,i) = a;
+                    ximgstack(:,:,3,i) = a;
+                    fprintf('x axis = %d\n',i)
+                end
+            end
+            write(dq,[0,0]);
+            clc
+
+            if(strcmp(obj.cam.camName,'Daheng'))
+                for j=1:yframenumber+1 %calibrate toward x direction
+                    write(dq,[0,0.1*(j-1)]);
+                    pause(0.5)
+                    a = getsnapshot(ca);
+                    yimgstack(:,:,:,j) = a;
+                    fprintf('y axis = %d\n',j)
+                end
+            elseif(strcmp(obj.cam.camName,'PCO'))
+                for j=1:yframenumber+1 %calibrate toward x direction
+                    write(dq,[0,0.1*(j-yframenumber/2)*ypixel/2048]);
+                    pause(0.5)
+                    a = floor(getsnapshot(ca)/256);
+                    yimgstack(:,:,1,j) = a;
+                    yimgstack(:,:,2,j) = a;
+                    yimgstack(:,:,3,j) = a;
+                    fprintf('y axis = %d\n',j)
+                end
+            end
+            write(dq,[0,0]);
+            clc
+            fprintf('Acquisition has down')
+
+            s.ximgstack = ximgstack;
+            s.yimgstack = yimgstack;
+        end
+        % 仿射变换
+        function [w,center,curve1,curve2] = slope(ximgstack,yimgstack,axes)
+            PointNumberx = size(ximgstack,4);
+            PointNumbery = size(yimgstack,4);
+            a = zeros(PointNumberx,2);
+            b = zeros(PointNumbery,2);
+            for i=1:PointNumberx
+                x = ximgextraction(ximgstack,i);
+                a(i,:) = caliimgprocess(x);
+            end
+
+            for j=1:PointNumbery
+                y = yimgextraction(yimgstack,j);
+                b(j,:) = caliimgprocess(y);
+            end
+
+            tx = polyfit(a(:,1),a(:,2),1);
+            ty = polyfit(b(:,1),b(:,2),1);
+
+            if((a(1,1)<a(PointNumberx,1)) && (a(1,2)>a(PointNumberx,2)))
+                w1 = - atan(tx(1));
+                w2 = pi/2 - atan(ty(1));
+            elseif((a(1,1)>a(PointNumberx,1)) && (a(1,2)>a(PointNumberx,2)))
+                w1 = pi - atan(tx(1));
+                w2 = pi/2 - atan(ty(1));
+            elseif((a(1,1)>a(PointNumberx,1)) && (a(1,2)<a(PointNumberx,2)))
+                w1 = pi - atan(tx(1));
+                w2 = 3/2*pi - atan(ty(1));
+            elseif((a(1,1)<a(PointNumberx,1)) && (a(1,2)<a(PointNumberx,2)))
+                w1 = -atan(tx(1));
+                w2 = 3/2*pi - atan(ty(1));
+            end
+
+            w = -(w1+w2)/2;
+
+            center = (a(floor(PointNumberx-1/2),:)+b(floor(PointNumbery/2),:))/2;
+            [ax,ay] = corrdinate_transformation(a(:,2),a(:,1),w,center);
+            [bx,by] = corrdinate_transformation(b(:,2),b(:,1),w,center);
+
+            a1 = [ax,ay];
+            b1 = [bx,by];
+
+            pp1 = a(PointNumberx-1,:) + (b(PointNumbery-1,:) - b(1,:))/2;
+            pp2 = a(1,:) + (b(PointNumbery-1,:) - b(1,:))/2;
+            pp3 = a(1,:) - (b(PointNumbery-1,:) - b(1,:))/2;
+            pp4 = a(PointNumberx-1,:) - (b(PointNumbery-1,:) - b(1,:))/2;
+
+            my_vertices = [pp1;pp2;pp3;pp4];
+            h = drawpolygon(axes,'Color','g','InteractionsAllowed','none','Position',my_vertices);
+
+            vx = 0.1*(1-floor((PointNumberx-1)/2):1+floor((PointNumberx-1)/2))';
+            vy = 0.1*(1-floor((PointNumbery-1)/2):1+floor((PointNumbery-1)/2))';
+
+            [curve1, ~, ~] = fit(a1(:,1),vx,'smoothingspline');  %f1 = vx(V) = p1 * xpixel + p2
+            [curve2, ~, ~] = fit(b1(:,2),vy,'smoothingspline');  %f2 = vy(V) = f2.p1 * ypixel + f2.p2
+            
+            save('data.mat','w','center','curve1','curve2')
+        end
+        % calibration
+        function bool = calibration(obj)
+            obj.addlog('calibrate start');
+            try
+                s = obj.CaliImgAcqui(obj);
+                [obj.w,obj.center,obj.curve1,obj.curve2] = slope(s.ximgstack,s.yimgstack,axes);
+                bool = true;
+                obj.addlog('calibrate success');
+            catch
+                bool = false;
+                obj.addlog('calibrate failed');
+            end
+        end
+    end
+    
     %% 功能类函数
     methods
         function t = get_time(~)
@@ -182,18 +332,6 @@ classdef OTModel < handle
                 obj.logMessage{length(obj.logMessage)+1,1} = [time,str];
                 notify(obj,'MessageUpdated');
             end
-        end
-        
-        function customPreviewUpdateFcn(~, event, himage)
-            % 从事件数据中获取当前帧
-            frameData = event.Data;
-
-            % 调整图像对比度，这里仅作为示例
-            % 请根据实际需要调整算法
-            adjustedData = imadjust(frameData,stretchlim(frameData),[]);
-
-            % 更新预览窗口的图像数据
-            set(himage, 'CData', adjustedData);
         end
 
     end
