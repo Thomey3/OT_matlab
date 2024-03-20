@@ -10,6 +10,7 @@ classdef OTModel < handle
         % DAQ
         DAQ
         velocity
+        mode
         % 电压-坐标
         w 
         center
@@ -330,7 +331,10 @@ classdef OTModel < handle
         function getvelocity(obj,v)
             obj.velocity = v;
         end
-        % 
+        % mode
+        function getMode(obj,mode)
+           obj.mode = mode{1,1}; 
+        end
     end
     
     %% 功能类函数

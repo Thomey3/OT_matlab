@@ -184,7 +184,7 @@ classdef OTController < handle
         end
         
         function callback_scanpath_mode(obj,~,~)
-            obj.hOTmodel.getMode(obj.hOTView.GUI.scanner_velocity.String);
+            obj.hOTmodel.getMode(obj.hOTView.GUI.scanner_velocity.String(obj.hOTView.GUI.scanner_velocity.Value));
         end
 %         
 %         function callback_scanpath(obj,~,~)
