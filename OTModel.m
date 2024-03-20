@@ -14,6 +14,14 @@ classdef OTModel < handle
         path
         interval
         scanmode
+        % ROI
+        Path
+        hOTROI
+        hOTSP
+        lenth
+        OTPath_inf
+        multiple_position_x = []
+        multiple_position_y = []
         % 电压-坐标
         w 
         center
@@ -334,7 +342,7 @@ classdef OTModel < handle
         function getvelocity(obj,v)
             obj.velocity = v;
         end
-        % mode
+        % mode,scanpath,interval,scanmode
         function getMode(obj,mode)
            obj.mode = mode{1,1}; 
         end
@@ -346,6 +354,92 @@ classdef OTModel < handle
         end
         function getScanmode(obj,scanmode)
            obj.scanmode = scanmode{1,1}; 
+        end
+        function addpath(obj,axes)
+            Mode = obj.mode; 
+            scanpath = obj.scanpath; 
+            Interval = obj.interval; 
+            
+            switch scanpath
+                case 'point'
+                    obj.Path = [obj.Path, drawpoint(axes,'Color','r','InteractionsAllowed','none')];
+                    position = obj.Path(end).Position; 
+                case 'line'
+                    obj.Path = [obj.Path, drawline(axes,'Color','r','InteractionsAllowed','none')];
+                    linepoint = obj.OTPath(end).Position;
+                    xp = linepoint(:,1);
+                    yp = linepoint(:,2);
+                    if xp(1)>xp(2)
+                        Interval = -Interval;
+                    end
+                    x_interval = xp(1):Interval:xp(2);
+                    y_interval = interp1(xp,yp,x_interval);
+                    position = [x_interval',y_interval'];
+                case 'rectangle_in'
+                    obj.Path = [obj.Path, drawrectangle(axes,'Color','r','InteractionsAllowed','none')];
+                    point1 = obj.Path(end).Vertices(1,:);
+                    point2 = obj.Path(end).Vertices(2,:);
+                    point3 = obj.Path(end).Vertices(3,:);
+                    point4 = obj.Path(end).Vertices(4,:);
+                    density = Interval;
+                    ll = abs(point4(1) - point1(1)); % xlength of rectangle
+                    ww = abs(point2(2) - point1(2)); % ylength of rectangle
+                    lll = floor(ll/density); % x point number
+                    www = floor(ww/density);% y point number
+                    % 初始化点集数组
+                    sPoints = zeros(floor(lll*www), 2);
+                    % 计算x和y方向上的步进间隔
+                    xStep = density;
+                    yStep = density;
+                    % 生成S型扫描点集
+                    for i = 0:www-1
+                        for j = 0:lll-1
+                            if mod(i, 2) == 0
+                                % 偶数行：从左到右
+                                x = point1(1) + j*xStep;
+                            else
+                                % 奇数行：从右到左
+                                x = point1(1) + (lll-1-j)*xStep;
+                            end
+                            y = point1(2) + i*yStep;
+                            sPoints(i*lll+j+1, :) = [x, y];
+                        end
+                    end
+                    position = [sPoints(:,1),sPoints(:,2)];
+            end
+            [x,y] = corrdinate_transformation(position(2),position(1),obj.w,obj.center);
+            pathpoint = [x,y];
+            switch Mode
+                case 'Single'
+                    obj.hOTROI = [obj.hOTROI;pathpoint];
+                    obj.hOTSP = [obj.hOTSP;pathpoint(1,:)];
+                    obj.lenth = size(pathpoint,1);
+                    obj.OTPath_inf.lenth = [obj.OTPath_inf.lenth,obj.lenth];
+                    method_num = 1;
+                case 'Multiple'
+                    l = size(pathpoint,1) - size(obj.multiple_position_x,1);
+                    if l > 0 && ~isempty(obj.multiple_position_x)        
+                        obj.multiple_position_x = padarray(obj.multiple_position_x,[l,0],'replicate','post');
+                        obj.multiple_position_y = padarray(obj.multiple_position_y,[l,0],'replicate','post');
+                    elseif l < 0
+                        p1 = [pathpoint(:,1)',pathpoint(end,1) * ones([1,-l])];
+                        p2 = [pathpoint(:,2)',pathpoint(end,2) * ones([1,-l])];
+                        pathpoint = [p1;p2]';
+                    end
+                    obj.multiple_position_x = [obj.multiple_position_x,pathpoint(:,1)];
+                    obj.multiple_position_y = [obj.multiple_position_y,pathpoint(:,2)];
+                    method_num = 2;
+                case 'Return'
+                    position_fz = flipud(pathpoint);
+                    position_new = vertcat(pathpoint,position_fz);
+                    obj.hOTROI = [obj.hOTROI;position_new];
+                    obj.hOTSP = [obj.hOTSP;position_new(1,:)];
+                    obj.lenth = size(position_new,1);
+                    obj.OTPath_inf.lenth = [obj.OTPath_inf.lenth,obj.lenth];
+                    method_num = 4;
+            end
+                obj.OTPath_inf.number = size(obj.Path,2);
+                obj.OTPath_inf.method = [obj.OTPath_inf.method,method_num];
         end
     end
     

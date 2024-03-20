@@ -198,10 +198,10 @@ classdef OTController < handle
         function callback_scanmode(obj,~,~)
             obj.hOTmodel.getScanmode(obj.hOTView.GUI.scanmode.String(obj.hOTView.GUI.scanmode.Value));
         end
-%         
-%         function callback_addpath(obj,~,~)
-%             
-%         end
+        
+        function callback_addpath(obj,~,~)
+            
+        end
 %         
 %         function callback_finish(obj,~,~)
 %             
