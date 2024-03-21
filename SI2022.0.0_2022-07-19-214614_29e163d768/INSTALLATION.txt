@@ -1,0 +1,4 @@
+If you've installed ScanImage manually, you need to register certain COM objects that are required for our licensing system.
+
+1) go to "<install directory>\scanimage\+scanimage\+util\+private\+qlm\private"
+2) Right click on "QLMRegister.bat" and select "Run as Administrator"

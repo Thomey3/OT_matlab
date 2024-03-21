@@ -1,0 +1,443 @@
+classdef drawRectTool < scanimage.components.tileTools.tileTool
+   
+    %% Abstract Property Realization
+    properties(Constant)
+        toolName = 'Default Rect Draw Tool';
+    end
+    
+    properties
+        drawRectOutline;
+        tileData;
+    end
+    
+    properties
+        selectedArea;
+        tileSizes = [10 10];
+        numTiles = 5;
+        zRange;
+    end
+    
+    %% Life-Cycle
+    methods
+        function obj = drawRectTool(hTileView)
+            obj@scanimage.components.tileTools.tileTool(hTileView);
+            obj.activateTool();
+        end
+        
+        function delete(obj)
+            obj.deactivateTool();
+            delete(obj.drawRectOutline);
+        end
+    end
+    
+    %% Functional
+    methods
+        function activateTool(obj)
+            obj.hAxes.ButtonDownFcn = @obj.drawTileArea;
+            obj.hFig.Pointer = 'crosshair';
+        end
+        
+        function deactivateTool(obj)
+            % Just call delete?
+            obj.hFig.Pointer = 'arrow';
+            set(obj.hFig,'WindowButtonMotionFcn',[],'WindowButtonUpFcn',[]);
+            set(obj.hAxes, 'ButtonDownFcn', []);
+        end
+        
+        function apply(obj, tileParams)
+            
+            tiles = scanimage.components.tiles.scanTile.empty(0,1);
+            
+            if ~isempty(tileParams)
+                tileCenterPts = tileParams{1};
+                tileCornerPts = tileParams{2};
+
+                if ~isempty(tileCenterPts)
+                    for curZ = obj.zRange
+                        for curTile = 1:obj.numTiles
+                            tiles(end+1) = obj.makeScanTile(obj.hSI,tileCenterPts{curTile},tileCornerPts{curTile},curZ, 1:obj.hSI.hChannels.channelsAvailable);
+%                             for chanIdx = 1:obj.hSI.hChannels.channelsAvailable
+%                                 tg = scanimage.components.tileGenerators.defaultScanTileGenerator;
+%                                 tiles(end+1) = tg.generateTile(obj.hSI,tileCenterPts{curTile},tileCornerPts{curTile},curZ, 1:obj.hSI.hChannels.channelsAvailable);
+%                                 tiles(end+1) = tg.generateTile(obj.hSI,tileCenterPts{curTile},tileCornerPts{curTile},curZ, chanIdx);
+%                             end
+                        end
+                    end
+
+                else
+
+                end
+            end
+            
+            obj.hTileView.hTileManager.addScanTile(tiles);
+            
+        end
+    end
+    
+    %% Tool Specific
+    methods
+        function drawTileArea(obj, stop, varargin)
+            persistent oppt;
+            persistent ocenterxy;
+            persistent centerxy;
+            persistent hsz;
+            
+            if nargin > 2
+                oppt = getPointerLocation(obj.hAxes);
+                
+                hsz = [100 100]/2; 
+                centerxy = hsz;
+                
+                handleLen = diff(obj.hAxes.YLim) / 40;
+
+                pts = [centerxy-hsz; centerxy+[-hsz(1) hsz(2)]; centerxy+[hsz(1) -hsz(2)]; centerxy+hsz; centerxy; centerxy-[0 hsz(2)+handleLen]];
+                rot = 0;
+                R = [cos(rot) sin(rot) 0;-sin(rot) cos(rot) 0; 0 0 1];
+                pts = scanimage.mroi.util.xformPoints(pts,R);
+                pts = pts + repmat(oppt,6,1);
+                ocenterxy = pts(5,:);
+                centerxy = ocenterxy;
+
+                xx = [pts(1:2,1) pts(3:4,1)];
+                yy = [pts(1:2,2) pts(3:4,2)];
+                
+                % Zdata of outline must be within axes Z lim. 
+                axesZLim = obj.hAxes.ZLim;
+                obj.drawRectOutline = surface(xx, yy, ones(2),'FaceColor','none','edgecolor','blue','linewidth',1,'parent',obj.hAxes);
+                zLimRange = min(axesZLim):0.0001:max(axesZLim);
+                idx = floor(numel(zLimRange)/2);
+                obj.drawRectOutline.ZData = zLimRange(idx)*ones(2);
+                    
+                set(obj.hFig,'WindowButtonMotionFcn',@(varargin)obj.drawTileArea(false),'WindowButtonUpFcn',@(varargin)obj.drawTileArea(true));
+                waitfor(obj.hFig,'WindowButtonMotionFcn',[]);
+            elseif stop
+                
+                obj.deactivateTool();
+                
+                sz = hsz*2;
+                obj.selectedArea = sz;
+                if isempty(obj.zRange)
+                    obj.zRange = obj.hFig.UserData.currentZ;
+                end
+                
+                tileParams = obj.setTileParams(sz);
+                
+                % Send Tile Params to generator
+                obj.apply(tileParams);
+                
+                most.idioms.safeDeleteObj(obj.drawRectOutline);
+            else
+                nwpt = getPointerLocation(obj.hAxes);
+                
+                centerxy = (oppt+nwpt)/2;
+                
+                relpt = nwpt - centerxy;
+                rot = 0;%-obj.defaultRoiRotation * pi / 180;
+                R = [cos(rot) sin(rot) 0;-sin(rot) cos(rot) 0; 0 0 1];
+                hsz = abs(scanimage.mroi.util.xformPoints(relpt,R,true));
+
+%                 % contrain minimum drag size
+%                 if hsz < (diff(obj.hAxes.YLim) / 200)
+%                     centerxy = ocenterxy;
+%                     hsz = [100 100]/2;%[obj.defaultRoiWidth obj.defaultRoiHeight]/2;
+%                     flwMouse = false;
+%                 else
+%                     flwMouse = true;
+%                 end
+                
+                
+                %find new points
+                handleLen = diff(obj.hAxes.YLim) / 40;
+                pts = [-hsz; -hsz(1) hsz(2); hsz(1) -hsz(2); hsz; 0 0; 0 -hsz(2)-handleLen];
+                rot = 0;
+                R = [cos(rot) sin(rot) 0;-sin(rot) cos(rot) 0; 0 0 1];
+                pts = scanimage.mroi.util.xformPoints(pts,R);
+                pts = pts + repmat(centerxy,6,1);
+
+                xx = [pts(1:2,1) pts(3:4,1)];
+                yy = [pts(1:2,2) pts(3:4,2)];
+                obj.drawRectOutline.XData = xx;
+                obj.drawRectOutline.YData = yy;
+            end
+        end
+    end
+    
+    
+    methods
+        function tileParams = setTileParams(obj, sizeXY)
+            % Tile Params are tileCenters, Z Range
+            if nargin < 1 || isempty(obj)
+                obj = [];
+            end
+
+            dlg = dialog('Position', most.gui.centeredScreenPos([200,150]), 'Name', 'Tile Params', 'CloseRequestFcn', @closeFcn);
+            
+            absMaxScanTileSz = getAbsMaxScanTileSize; % [46 20]
+            %  if selected area is greater than the max size of tile...
+            if sizeXY > absMaxScanTileSz
+                %... set tile size to max and...
+                initTileSizes = absMaxScanTileSz;
+            % ... Otherwise determine 
+            else
+                initTileSizes = sizeXY;
+            end
+            initMaxNumTiles = calcMaxNumTiles(sizeXY, initTileSizes); % This does
+            obj.numTiles = initMaxNumTiles;
+            obj.tileSizes = initTileSizes;
+            
+            selectedAreaTxt = uicontrol('Parent', dlg, 'Style', 'text', 'String', sprintf('Selected area: [%.3f %.3f] um', sizeXY(1), sizeXY(2)), 'Position', [5 125 200 20]);
+
+            tileSizeTxt = uicontrol('Parent', dlg, 'Style', 'text', 'String', 'Tile SizeXY(um):', 'Position', [3 100 100 20]);
+            etTileSizes = uicontrol('Parent', dlg, 'Style', 'edit', 'String', sprintf('%.3f %.3f', initTileSizes),'Position', [95 102.5 100 20], 'Callback', @setScanTileSizes);
+            
+            numTilesTxt = uicontrol('Parent', dlg, 'Style', 'text', 'String', 'Num Tiles:','Position', [8 72.5 60 20]);
+            etNumTiles = uicontrol('Parent', dlg, 'Style', 'edit', 'String', sprintf('%d', initMaxNumTiles),'Position', [95 75 60 20], 'Callback', @setNumTiles);
+
+            zRangeTxt = uicontrol('Parent', dlg, 'Style', 'text', 'String', 'Z Series(um):', 'Position', [10 45 70 20]);
+            etZRange = uicontrol('Parent', dlg, 'Style', 'edit', 'String', sprintf('%.3f', obj.hFig.UserData.currentZ), 'Position', [95 48 100 20], 'Callback', @setZRange);
+
+            pbAcceptCont = uicontrol('Parent', dlg, 'Style', 'pushbutton', 'String', 'Accept/Continue','Position', [8 10 100 30], 'Callback', @finish);
+
+            pbCancel = uicontrol('Parent', dlg, 'Style', 'pushbutton', 'String', 'Cancel','Position', [135 10 60 30], 'Callback', @finish);
+
+            uiwait(dlg);
+            
+            
+            % Set the desired size of ScanTiles
+            function setScanTileSizes(src, evt)
+                % Requested Tile Size
+                scanTileSize = str2num(src.String);
+                
+                sizeMax = min(absMaxScanTileSz, sizeXY);
+                % If size exceeds max...
+                if any(scanTileSize>sizeMax)
+                    %... set to max
+                    scanTileSize = sizeMax;
+                    % Update GUI Box
+                    src.String = sprintf('%.3f %.3f', scanTileSize);
+                end
+                
+                % Get the number of ScanTiles available at this size given
+                % the highlighted area
+                mxNumTiles = calcMaxNumTiles(sizeXY, scanTileSize);
+                
+                % Set prop val numTiles to current max num tiles
+                obj.numTiles = mxNumTiles;
+                
+                % Update GUI Box
+                etNumTiles.String = sprintf('%d', obj.numTiles);
+                
+                % Set prop val tileSizes to determine scanTileSize
+                % (requested or max)
+                obj.tileSizes = scanTileSize;
+                
+            end
+            
+            % Determine the maximum size a tile can be if you want N tiles
+            % in the selected area
+            function mxTileSz = calcMaxTileSize(nmTls, selectedArea)
+                % Area of the tile area encircled (squared really)
+                %selectedArea = abs(selectedArea(1)*selectedArea(2));
+                selectedArea = abs(selectedArea(1)*selectedArea(2));
+                mxTileSz = [(sqrt(selectedArea/nmTls)) (sqrt(selectedArea/nmTls))];
+            end
+            
+            % Set the desired number of tiles
+            function setNumTiles(src, evt)
+                % There are less restrictions on num tiles as we can adjust
+                % tile size. Restriction would be if we try to do so many
+                % tiles that the tiles need to be too small or 1 giant
+                % tile...
+                
+                
+                % Requested number of tiles
+                numTls = str2num(src.String);
+                
+                % Maximum Tile Size
+                sizeMax = min(absMaxScanTileSz, sizeXY);
+                
+                % If no tiles requested, quit
+                if numTls == 0
+                    src.String = sprintf('%d', obj.numTiles);
+                    return;
+                else
+                    % Get the max size a tile can be given the selected
+                    % area and the requested number of tiles
+                    mxTileSz = calcMaxTileSize(numTls, sizeXY);
+                    
+                    % Check to make sure mxTileSz does not exceed maximum
+                    % possible size..
+                    if any(mxTileSz>sizeMax)
+                        %... if it does set tile size to the maximum and
+                        % re-calc the number of possible tiles - this
+                        % usually shouldnt happend
+                        mxTileSz = sizeMax;
+                        numTls = calcMaxNumTiles(sizeXY,mxTileSz); % Need a minimum version?
+                    end
+                    obj.tileSizes = mxTileSz;
+                    etTileSizes.String = sprintf('%.3f %.3f', obj.tileSizes);
+                    obj.numTiles = numTls;
+                    src.String = sprintf('%d', obj.numTiles);
+                end
+                
+            end
+            
+            % Determine the maximum number of tiles at given size that will
+            % fit in selected area
+            function numTls = calcMaxNumTiles(selectedArea, tileSizes)
+                % Area of the tile area encircled (squared really)
+                selectedArea = abs(selectedArea(1)*selectedArea(2));
+                % Area of an individual tile at the requested size
+                areaOfTile = abs(tileSizes(1) * tileSizes(2));
+                
+                numTls = floor(selectedArea/areaOfTile);
+%                 obj.numTiles = numTls;
+            end
+
+            function setZRange(src, evt)
+                obj.zRange = str2num(src.String);
+            end
+
+            function finish(src, evt)
+                if strcmp(src.String, 'Cancel')
+                    tileParams = {};
+%                     close(dlg);
+                    
+                else
+                    % 1) Check that tile size wont exceed area
+                    % 2) Generate center points
+                    areaCornerPts = [obj.drawRectOutline.XData(1,1) obj.drawRectOutline.YData(1,1);...
+                        obj.drawRectOutline.XData(1,2) obj.drawRectOutline.YData(1,1);...
+                        obj.drawRectOutline.XData(1,2) obj.drawRectOutline.YData(2,1);...
+                        obj.drawRectOutline.XData(1,1) obj.drawRectOutline.YData(2,1)];
+                    
+                    samplePoints = generateCenterPoints(sizeXY, areaCornerPts, obj.tileSizes, obj.numTiles);
+                    cornerPts = generateCornerPoints(samplePoints, obj.tileSizes);
+                    tileParams = {samplePoints, cornerPts};
+                end
+                delete(gcf);
+            end
+
+            function centers = generateCenterPoints(selectedArea, areaCornerPts, tileSizesXY, numTiles)
+                temp = {};
+                rowCount = 0;
+                
+                % cp is TL, TR, BR, BL
+                for i = 1:numTiles
+                    if isempty(temp)
+                        % first tile is indexed off the top left of the
+                        % selected area
+                        temp{end+1} = [areaCornerPts(1,1) + (0.5*tileSizesXY(1)) areaCornerPts(1,2)+(0.5*tileSizesXY(2))];
+                    else
+                        % Get the last center pt...
+                        lastPt = temp{end};
+                        % Last center point + size of tile in X is new
+                        % center pt, size of tile in X plus half the size
+                        % of the tile in X, or 1.5x the tile size in X
+                        % should get me the far edge, if this edge is less
+                        % than the selected areas far right edge based on
+                        % the corner points, then I can add this center
+                        % pt......
+                        if lastPt(1) + (1.5*tileSizesXY(1)) <= areaCornerPts(2,1)
+                            temp{end+1} = [lastPt(1)+tileSizesXY(1) lastPt(2)];
+                        %..... other wise I may need to step down in Y
+                        else
+                            % If I am shifting down in Y then I need to
+                            % keep track by how much so use this row
+                            % counter
+                            rowCount = rowCount+1;
+                            % Grab the first point which was indexed off
+                            % the top left...
+                            firstPt = temp{1};
+                            % the new point has the same X position but its
+                            % Y position is shifted by the size of a scan
+                            % tile in Y * the number of rows.
+                            newPt = [firstPt(1) firstPt(2)+rowCount*tileSizesXY(2)];
+                            % Double check that the bottome edge of this
+                            % tile will not exceed the bottom edge of the
+                            % selected area
+%                             if ((newPt(2) + 0.5*tileSizesXY(2)) <= areaCornerPts(3,2))
+                                temp{end+1} = newPt;
+%                             end
+                        end
+                        
+                    end
+                end
+                
+                centers = temp;
+            end
+            
+            function cornerPts = generateCornerPoints(centerPts, tileSizes)
+                cp_ = {};
+                for i = 1:numel(centerPts)
+                    curPt = centerPts{i};
+                    
+                    X = tileSizes(1)/2;
+                    Y = tileSizes(2)/2;
+                    
+                    TL = [curPt(1) - X curPt(2) - Y];
+                    TR = [curPt(1) + X curPt(2) - Y];
+                    BR = [curPt(1) + X curPt(2) + Y];
+                    BL = [curPt(1) - X curPt(2) + Y];
+                    
+                    cp_{i} = [TL; TR; BR; BL];
+                end
+                
+                cornerPts = cp_;
+            end
+            
+            function closeFcn(src, evt)
+                tileParams = {};
+                delete(gcf);
+            end
+            
+            % Get the absolute maximum ScanTile size (so you dont try to
+            % scan more than you can)
+            function AbsMaxSize = getAbsMaxScanTileSize()
+                % Max Tile Size
+                cp = obj.hSI.hScan2D.fovCornerPoints; % Need to deal with resonant FOV extended mode, remove addition of X Galvo range...
+                cp(:,3) = 0;
+                cp = scanimage.mroi.coordinates.Points(obj.hSI.hCoordinateSystems.hCSReference,cp);
+                cpUm = cp.transform(obj.hSI.hMotors.hCSAlignment);
+                cpUm = cpUm.points;
+                cpUm(:,3) = [];
+                AbsMaxSize = [abs(cpUm(1,1))*2 abs(cpUm(1,2))*2]; 
+            end
+
+        end
+        
+        
+        function tile = makeScanTile(obj, hSI, tileCenter, tileCornerPts, zPos, channel)
+            % Convert cornerPts to scan anlges
+            cp = tileCornerPts;
+            cp(:,3) = 0;
+            cp = scanimage.mroi.coordinates.Points(hSI.hCoordinateSystems.hCSSampleRelative, cp);
+            cp = cp.transform(hSI.hCoordinateSystems.hCSReference);
+            cp = cp.points;
+            cp(:,3) = [];
+            
+            % Convert size to scan angles
+            sizeXY = [abs(cp(1,1) - cp(2,1)) abs(cp(1,2) - cp(4,2))];
+
+            % Convert center to scan angles
+            centerPt = [tileCenter zPos];
+            centerPt = scanimage.mroi.coordinates.Points(hSI.hCoordinateSystems.hCSSampleRelative, centerPt);
+            centerPt = centerPt.transform(hSI.hCoordinateSystems.hCSReference);
+            centerPt = centerPt.points;
+            centerPt(:,3) = [];
+            
+            % Create Scanfield
+            sf = scanimage.mroi.scanfield.fields.RotatedRectangle();
+            sf.centerXY = centerPt; % This needs to shift to 0,0 for scanning but needs to be unshifted here so the sample poitn will wbe correct
+            sf.sizeXY = sizeXY;
+            
+            % Create Tile
+            tile = scanimage.components.tiles.scanTile(hSI, sf, zPos, channel);
+        end
+    end
+    
+end
+
+function pt = getPointerLocation(hAx)
+    pt = hAx.CurrentPoint(1, 1:2);
+end
