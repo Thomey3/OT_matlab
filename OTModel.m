@@ -7,6 +7,7 @@ classdef OTModel < handle
         Y_offset = 0
         ROIwidth = 2048
         ROIheight = 2048
+        t
         % DAQ
         DAQ
         velocity = 30 % 默认值
@@ -105,27 +106,66 @@ classdef OTModel < handle
     %% camera config
     methods
         % 预览
-        function bool = campreview(obj)
+%         function bool = campreview(obj)
+%             try
+%                 vidRes = get(obj.cam.camera, 'VideoResolution'); % 获取相机分辨率
+%                 nBands = get(obj.cam.camera, 'NumberOfBands');   % 获取相机的通道数（RGB）
+%                 hImage = image(zeros(vidRes(2), vidRes(1), nBands)); % hImage用来存储画面
+%                 warning('off','imaq:preview:typeBiggerThanUINT8'); 
+%                 设置preview的自定义更新函数
+%                 setappdata(hImage,'UpdatePreviewWindowFcn',@obj.mypreview_fcn);
+%                 
+%                 preview(obj.cam.camera,hImage);
+%                 bool = true;
+%                 obj.addlog(' preview started');
+%             catch
+%                 bool = false;
+%                 obj.addlog(' preview failed');
+%             end
+%         end
+%         停止预览
+%         function bool = stop_preview(obj)
+%             try
+%                 stoppreview(obj.cam.camera);
+%                 bool = true;
+%                 obj.addlog(' preview stopped');
+%             catch
+%                 bool = false;
+%                 obj.addlog(' preview stopped failed');
+%             end
+%         end
+        function bool = campreview(obj,ViewAxes)
             try
-                vidRes = get(obj.cam.camera, 'VideoResolution'); % 获取相机分辨率
-                nBands = get(obj.cam.camera, 'NumberOfBands');   % 获取相机的通道数（RGB）
-                hImage = image(zeros(vidRes(2), vidRes(1), nBands)); % hImage用来存储画面
-                warning('off','imaq:preview:typeBiggerThanUINT8'); 
-                % 设置preview的自定义更新函数
-                setappdata(hImage,'UpdatePreviewWindowFcn',@mypreview_fcn);
-                
-                preview(obj.cam.camera,hImage);
+                % 创建定时器
+                obj.t = timer;
+                obj.t.TimerFcn = @(~,~)obj.updatePreview(ViewAxes);
+                obj.t.Period = 0.0001;  % 更新间隔，根据需要调整，这里假设为10帧每秒
+                obj.t.ExecutionMode = 'fixedRate';
+            
+                % 启动定时器
+                start(obj.t);
                 bool = true;
-                obj.addlog(' preview started');
             catch
                 bool = false;
-                obj.addlog(' preview failed');
             end
+        
+            % 在需要停止预览时，记得使用 stop(t); 和 delete(t); 来停止并删除定时器
         end
-        % 停止预览
+        
+        function updatePreview(obj,ViewAxes)
+            % 从相机捕获图像
+            frame = getsnapshot(obj.cam.camera); % 确保 cam 已正确配置
+        
+            % 如果需要，可以在这里添加图像处理代码，例如调整对比度
+        
+            % 显示图像
+            imshow(frame, 'Parent', ViewAxes);
+        end
+
         function bool = stop_preview(obj)
             try
-                stoppreview(obj.cam.camera);
+                stop(obj.t);
+                delete(obj.t);
                 bool = true;
                 obj.addlog(' preview stopped');
             catch
@@ -540,7 +580,7 @@ classdef OTModel < handle
     %% 功能类函数
     methods
         function t = get_time(~)
-            time = datetime("now"); % 原来是clock
+            time = clock; % 原来是clock
             t = [num2str(time(4)),'-',num2str(time(5)),'-',num2str(round(time(6))),'-'];
         end
         
