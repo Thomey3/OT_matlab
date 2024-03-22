@@ -7,7 +7,6 @@ classdef OTModel < handle
         Y_offset = 0
         ROIwidth = 2048
         ROIheight = 2048
-        t
         % DAQ
         DAQ
         velocity = 30 % 默认值
@@ -15,6 +14,7 @@ classdef OTModel < handle
         scanpath = "line"
         interval = 0.5 % 默认值
         scanmode = "contiunous"
+        lh
         % ROI
         Path
         hOTROI
@@ -82,6 +82,8 @@ classdef OTModel < handle
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
+                addAnalogInputChannel(obj.DAQ, 'Dev1', 'ai0', 'Voltage');
+                obj.DAQ.Rate = 1000;
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
@@ -136,14 +138,9 @@ classdef OTModel < handle
 %         end
         function bool = campreview(obj,ViewAxes)
             try
-                % 创建定时器
-                obj.t = timer;
-                obj.t.TimerFcn = @(~,~)obj.updatePreview(ViewAxes);
-                obj.t.Period = 0.0001;  % 更新间隔，根据需要调整，这里假设为10帧每秒
-                obj.t.ExecutionMode = 'fixedRate';
-            
-                % 启动定时器
-                start(obj.t);
+                % 创建监听器对象并保留引用
+                obj.lh = addlistener(obj.DAQ, 'DataAvailable', @(~,~)analogTriggeredAction(ViewAxes));
+                start(obj.DAQ,obj.scanmode);
                 bool = true;
             catch
                 bool = false;
@@ -152,20 +149,20 @@ classdef OTModel < handle
             % 在需要停止预览时，记得使用 stop(t); 和 delete(t); 来停止并删除定时器
         end
         
-        function updatePreview(obj,ViewAxes)
+        function analogTriggeredAction(obj,ViewAxes)
             % 从相机捕获图像
             frame = getsnapshot(obj.cam.camera); % 确保 cam 已正确配置
         
             % 如果需要，可以在这里添加图像处理代码，例如调整对比度
-        
+            frame_adjust = imadjust(frame);
             % 显示图像
-            imshow(frame, 'Parent', ViewAxes);
+            imshow(frame_adjust, 'Parent', ViewAxes);
         end
 
         function bool = stop_preview(obj)
             try
-                stop(obj.t);
-                delete(obj.t);
+                stop(obj.DAQ);
+                delete(obj.lh);
                 bool = true;
                 obj.addlog(' preview stopped');
             catch
@@ -559,9 +556,9 @@ classdef OTModel < handle
         end
         % 启动scanner
         function scan(obj)
-            stop(obj.DAQ);
             scanpath = obj.voltage_data;
             Scanmode = obj.scanmode;
+            stop(obj.DAQ);
             try
                 start(obj.DAQ,Scanmode)
             catch
