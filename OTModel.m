@@ -9,11 +9,11 @@ classdef OTModel < handle
         ROIheight = 2048
         % DAQ
         DAQ
-        velocity
-        mode
-        path
-        interval
-        scanmode
+        velocity = 30 % 默认值
+        mode = "single"
+        scanpath = "line"
+        interval = 0.5 % 默认值
+        scanmode = "contiunous"
         % ROI
         Path
         hOTROI
@@ -27,7 +27,7 @@ classdef OTModel < handle
         center
         curve1
         curve2
-        
+        voltage_data
         
         % information
         logMessage = cell(0,0)
@@ -347,7 +347,7 @@ classdef OTModel < handle
            obj.mode = mode{1,1}; 
         end
         function getScanpath(obj,path)
-           obj.path = path{1,1}; 
+           obj.scanpath = path{1,1}; 
         end
         function getInterval(obj,interval)
            obj.interval = interval; 
@@ -366,7 +366,7 @@ classdef OTModel < handle
                     position = obj.Path(end).Position; 
                 case 'line'
                     obj.Path = [obj.Path, drawline(axes,'Color','r','InteractionsAllowed','none')];
-                    linepoint = obj.OTPath(end).Position;
+                    linepoint = obj.Path(end).Position;
                     xp = linepoint(:,1);
                     yp = linepoint(:,2);
                     if xp(1)>xp(2)
@@ -476,12 +476,68 @@ classdef OTModel < handle
            obj.multiple_position_y = [];
            obj.addlog('Deleting Path ...');
         end
+        % scanthestartpoint(还没写多个点的)
+        function scan_startpoint(obj)
+            try
+                startpoint = obj.hOTROI(1,:);
+                matrix = [obj.curve1(startpoint(:,1)),obj.curve2(startpoint(:,2))];
+                obj.voltage_data = repmat(matrix, 1000, 1);
+                obj.addlog('voltage_data ready');
+                obj.scan();
+            catch
+                if isempty(obj.hOTROI)
+                    obj.addlog('path is empty');
+                else
+                    obj.addlog('scan_startpoint failed');
+                end
+            end
+        end
+        % 扫描整个路径
+        function scan_path(obj)
+            try
+                obj.voltage_data = [obj.curve1(obj.hOTROI(:,1)),obj.curve2(obj.hOTROI(:,2))];
+                obj.addlog('voltage_data ready');
+                obj.DAQ.Rate = obj.velocity;
+                time = line/obj.velocity;
+                obj.addlog(['time : ',num2str(time)]);
+                obj.scan();
+            catch
+                if isempty(obj.hOTROI)
+                    obj.addlog('path is empty');
+                else
+                    obj.addlog('scan_startpoint failed');
+                end
+            end
+        end
+        % 回到(0,0)位置
+        function reset(obj)
+            obj.hOTROI = [0,0];
+            obj.scan_startpoint;
+        end
+        % 启动scanner
+        function scan(obj)
+            stop(obj.DAQ);
+            scanpath = obj.voltage_data;
+            Scanmode = obj.scanmode;
+            try
+                start(obj.DAQ,Scanmode)
+            catch
+                obj.addlog(' optical tweezers did not start');
+            end
+
+            try
+                write(obj.DAQ,scanpath);
+                obj.addlog(' optical tweezers is running');
+            catch
+                obj.addlog(' Write failed ');
+            end
+        end
     end
     
     %% 功能类函数
     methods
         function t = get_time(~)
-            time = clock;
+            time = datetime("now"); % 原来是clock
             t = [num2str(time(4)),'-',num2str(time(5)),'-',num2str(round(time(6))),'-'];
         end
         

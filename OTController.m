@@ -210,17 +210,17 @@ classdef OTController < handle
         function callback_delete(obj,~,~)
             obj.hOTmodel.Delete;
         end
-%         
-%         function callback_scan_startpoint(obj,~,~)
-%             
-%         end
-%         
-%         function callback_scan(obj,~,~)
-%             
-%         end
 
-%         function callback_reset(obj,~,~)
-%             
-%         end
+        function callback_scan_startpoint(obj,~,~)
+            obj.hOTmodel.scan_startpoint;
+        end
+
+        function callback_scan(obj,~,~)
+            obj.hOTmodel.scan_path;
+        end
+
+        function callback_reset(obj,~,~)
+            obj.hOTmodel.reset;
+        end
    end
 end
