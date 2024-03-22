@@ -111,6 +111,9 @@ classdef OTModel < handle
                 nBands = get(obj.cam.camera, 'NumberOfBands');   % 获取相机的通道数（RGB）
                 hImage = image(zeros(vidRes(2), vidRes(1), nBands)); % hImage用来存储画面
                 warning('off','imaq:preview:typeBiggerThanUINT8'); 
+                % 设置preview的自定义更新函数
+                setappdata(hImage,'UpdatePreviewWindowFcn',@mypreview_fcn);
+                
                 preview(obj.cam.camera,hImage);
                 bool = true;
                 obj.addlog(' preview started');
@@ -549,5 +552,21 @@ classdef OTModel < handle
             end
         end
 
+        % 自定义的预览更新函数
+        function mypreview_fcn(~,event,hImage)
+            % 获取当前帧
+            frame = event.Data;
+            
+            % 如果需要，可以在这里转换frame的类型，例如，如果是uint16，可以转换为uint8
+            % frame = im2uint8(frame);
+        
+            % 对每个颜色通道应用对比度调整
+            for i = 1:size(frame,3)
+                frame(:,:,i) = imadjust(frame(:,:,i));
+            end
+            
+            % 使用调整后的帧更新显示
+            set(hImage, 'CData', frame);
+        end
     end
 end
