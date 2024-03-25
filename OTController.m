@@ -100,7 +100,7 @@ classdef OTController < handle
         %% camera
         function callback_Live(obj,~,~)
             if obj.living == false
-                preview = obj.hOTmodel.campreview;
+                preview = obj.hOTmodel.campreview(obj.hOTView.GUI.ViewAxes);
                 if preview == true
                     obj.living = true;
                     set(obj.hOTView.GUI.Live,'String','Stop Live');
