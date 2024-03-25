@@ -82,7 +82,8 @@ classdef OTModel < handle
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
-                addAnalogInputChannel(obj.DAQ, 'Dev1', 'ai0', 'Voltage');
+                addAnalogInputChannel(obj.DAQ, 'dev1', 'ai0', 'Voltage');
+                % addDigitalChannel(obj.DAQ, 'dev1', 'port0/line0', 'InputOnly');
                 obj.DAQ.Rate = 1000;
                 bool = true;
                 obj.addlog(' DAQ connected');
@@ -146,7 +147,6 @@ classdef OTModel < handle
             catch
                 bool = false;
             end
-        
             % 在需要停止预览时，记得使用 stop(t); 和 delete(t); 来停止并删除定时器
         end
         
