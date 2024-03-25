@@ -97,6 +97,7 @@ classdef OTModel < handle
         % ¶Ï¿ªDAQ
         function disconnect_daq(obj)
             try
+                obj.reset;
                 delete(obj.DAQ);
                 obj.addlog(' DAQ disconnected');
             catch
