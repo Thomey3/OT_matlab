@@ -82,9 +82,6 @@ classdef OTModel < handle
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
-                addAnalogInputChannel(obj.DAQ, 'dev1', 'ai0', 'Voltage');
-                % addDigitalChannel(obj.DAQ, 'dev1', 'port0/line0', 'InputOnly');
-                obj.DAQ.Rate = 1000;
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
@@ -110,60 +107,27 @@ classdef OTModel < handle
     %% camera config
     methods
         % 预览
-%         function bool = campreview(obj)
-%             try
-%                 vidRes = get(obj.cam.camera, 'VideoResolution'); % 获取相机分辨率
-%                 nBands = get(obj.cam.camera, 'NumberOfBands');   % 获取相机的通道数（RGB）
-%                 hImage = image(zeros(vidRes(2), vidRes(1), nBands)); % hImage用来存储画面
-%                 warning('off','imaq:preview:typeBiggerThanUINT8'); 
-%                 设置preview的自定义更新函数
-%                 setappdata(hImage,'UpdatePreviewWindowFcn',@obj.mypreview_fcn);
-%                 
-%                 preview(obj.cam.camera,hImage);
-%                 bool = true;
-%                 obj.addlog(' preview started');
-%             catch
-%                 bool = false;
-%                 obj.addlog(' preview failed');
-%             end
-%         end
-%         停止预览
-%         function bool = stop_preview(obj)
-%             try
-%                 stoppreview(obj.cam.camera);
-%                 bool = true;
-%                 obj.addlog(' preview stopped');
-%             catch
-%                 bool = false;
-%                 obj.addlog(' preview stopped failed');
-%             end
-%         end
-        function bool = campreview(obj,ViewAxes)
+        function bool = campreview(obj)
             try
-                % 创建监听器对象并保留引用
-                obj.lh = addlistener(obj.DAQ, 'DataAvailable', @(~,~)analogTriggeredAction(ViewAxes));
-                start(obj.DAQ,obj.scanmode);
+                vidRes = get(obj.cam.camera, 'VideoResolution'); % 获取相机分辨率
+                nBands = get(obj.cam.camera, 'NumberOfBands');   % 获取相机的通道数（RGB）
+                hImage = image(zeros(vidRes(2), vidRes(1), nBands)); % hImage用来存储画面
+                warning('off','imaq:preview:typeBiggerThanUINT8'); 
+                %设置preview的自定义更新函数
+                setappdata(hImage,'FramesAcquiredFcn ',@obj.mypreview_fcn);
+                
+                preview(obj.cam.camera,hImage);
                 bool = true;
+                obj.addlog(' preview started');
             catch
                 bool = false;
+                obj.addlog(' preview failed');
             end
-            % 在需要停止预览时，记得使用 stop(t); 和 delete(t); 来停止并删除定时器
         end
-        
-        function analogTriggeredAction(obj,ViewAxes)
-            % 从相机捕获图像
-            frame = getsnapshot(obj.cam.camera); % 确保 cam 已正确配置
-        
-            % 如果需要，可以在这里添加图像处理代码，例如调整对比度
-            frame_adjust = imadjust(frame);
-            % 显示图像
-            imshow(frame_adjust, 'Parent', ViewAxes);
-        end
-
+        %停止预览
         function bool = stop_preview(obj)
             try
-                stop(obj.DAQ);
-                delete(obj.lh);
+                stoppreview(obj.cam.camera);
                 bool = true;
                 obj.addlog(' preview stopped');
             catch
