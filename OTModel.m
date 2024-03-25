@@ -139,7 +139,8 @@ classdef OTModel < handle
         function snapshot(obj)
             try
                 snapshot1 = getsnapshot(obj.cam.camera);
-                imwrite(snapshot1, './save/snapshot1.tif');
+                t = obj.get_time;
+                imwrite(snapshot1, ['./snapshot/',t,'.tif']);
                 obj.addlog(' snapshot success');
             catch
                 obj.addlog(' snapshot failed');
@@ -147,22 +148,35 @@ classdef OTModel < handle
         end
         % record
         function record(obj,frame)
-            numFrames = str2double(frame);
-            obj.cam.camera.FramesPerTrigger = numFrames;
-            start(obj.cam.camera);
-            wait(obj.cam.camera);
-            stop(obj.cam.camera);
-            recording1 = getdata(obj.cam.camera, numFrames);
             startPath = './'; % 定义起始路径
             basePath  = uigetdir(startPath, '请选择保存文件的路径');
-            % 检查是否点击了取消按钮
-            if basePath  == 0
-                disp('cancel');
-            else
-                disp(['select: ', basePath ]);
-                % 在这里执行后续操作，例如读取或保存文件
+            numFrames = str2double(frame);
+            count = floor(numFrames/100);
+            remainder = rem(numFrames,100);
+            for num = 1:count
+                obj.cam.camera.FramesPerTrigger = 100;
+                start(obj.cam.camera);
+                wait(obj.cam.camera);
+                stop(obj.cam.camera);
+                recording1 = getdata(obj.cam.camera, 100);
                 baseFileName = 'Frame_';
-                for i = 1:numFrames
+                filenumber = count+100*num;
+                for i = filenumber : filenumber + 100
+                    % 创建文件名
+                    fileName = [basePath,'/', baseFileName, num2str(i), '.tif'];
+                    % 提取第i帧
+                    frame = recording1(:,:,:,i);
+                    imwrite(frame, fileName, 'tif');
+                end
+            end
+            if remainder ~= 0
+                obj.cam.camera.FramesPerTrigger = remainder;
+                start(obj.cam.camera);
+                wait(obj.cam.camera);
+                stop(obj.cam.camera);
+                recording1 = getdata(obj.cam.camera, remainder);
+                baseFileName = 'Frame_';
+                for i = count*100+1:count*100+remainder
                     % 创建文件名
                     fileName = [basePath,'/', baseFileName, num2str(i), '.tif'];
                     % 提取第i帧
@@ -552,23 +566,6 @@ classdef OTModel < handle
                 obj.logMessage{length(obj.logMessage)+1,1} = [time,str];
                 notify(obj,'MessageUpdated');
             end
-        end
-
-        % 自定义的预览更新函数
-        function mypreview_fcn(~,event,hImage)
-            % 获取当前帧
-            frame = event.Data;
-            
-            % 如果需要，可以在这里转换frame的类型，例如，如果是uint16，可以转换为uint8
-            % frame = im2uint8(frame);
-        
-            % 对每个颜色通道应用对比度调整
-            for i = 1:size(frame,3)
-                frame(:,:,i) = imadjust(frame(:,:,i));
-            end
-            
-            % 使用调整后的帧更新显示
-            set(hImage, 'CData', frame);
         end
     end
 end
