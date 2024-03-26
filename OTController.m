@@ -122,7 +122,10 @@ classdef OTController < handle
         end
         
         function callback_record(obj,~,~)
-            obj.hOTmodel.record(obj.hOTView.GUI.record_frame.String);
+            t = obj.convertToSeconds(obj.hOTView.GUI.record_frame.String);
+            FrameRate = str2double(obj.hOTView.GUI.FrameRate.String);
+            frame = floor(t * FrameRate);
+            obj.hOTmodel.record(frame,FrameRate);
         end
         
         function callback_exposure(obj,~,~)
@@ -231,6 +234,38 @@ classdef OTController < handle
 
         function callback_reset(obj,~,~)
             obj.hOTmodel.reset;
+        end
+   end
+
+   methods
+        function totalSeconds = convertToSeconds(timeStr)
+            % 定义正则表达式以找到小时、分钟和秒
+            hourPattern = '(?<hour>\d+)h';
+            minutePattern = '(?<minute>\d+)m';
+            secondPattern = '(?<second>\d+)s';
+            
+            % 使用正则表达式查找匹配项
+            hoursMatch = regexp(timeStr, hourPattern, 'names');
+            minutesMatch = regexp(timeStr, minutePattern, 'names');
+            secondsMatch = regexp(timeStr, secondPattern, 'names');
+            
+            % 将找到的时间单位转换为数字
+            hours = 0;
+            minutes = 0;
+            seconds = 0;
+            
+            if ~isempty(hoursMatch)
+                hours = str2double(hoursMatch.hour);
+            end
+            if ~isempty(minutesMatch)
+                minutes = str2double(minutesMatch.minute);
+            end
+            if ~isempty(secondsMatch)
+                seconds = str2double(secondsMatch.second);
+            end
+            
+            % 计算总秒数
+            totalSeconds = hours * 3600 + minutes * 60 + seconds;
         end
    end
 end

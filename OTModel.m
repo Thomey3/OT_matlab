@@ -148,13 +148,11 @@ classdef OTModel < handle
             end
         end
         % record
-        function record(obj,frame)
-
+        function record(obj,frame,FrameRate)
             startPath = './'; % 定义起始路径
             basePath  = uigetdir(startPath, '请选择保存文件的路径');
-            tic;
             numFrames = str2double(frame);
-            savecount = 10;
+            savecount = FrameRate/10; % 待定
             count = floor(numFrames/savecount);
             remainder = rem(numFrames,savecount);
             for num = 1:count
@@ -189,7 +187,6 @@ classdef OTModel < handle
                     imwrite(frame, fileName, 'tif');
                 end
             end
-            toc;
         end
         % exposure
         function change_exposure(obj,exposure)

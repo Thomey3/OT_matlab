@@ -93,7 +93,7 @@ classdef OTView < most.Gui
             %Â¼Ïñ
             record = most.gui.uiflowcontainer('Parent', camLiveFlow,'FlowDirection','RightToLeft');
             obj.GUI.record_frame = uicontrol('Parent',record,'Style','edit','Enable','off');
-            uicontrol('Parent',record,'Style','text','String','frame:','HorizontalAlignment','Center',...
+            uicontrol('Parent',record,'Style','text','String','duration:','HorizontalAlignment','Center',...
                 'FontSize',10);
             obj.GUI.record = uicontrol('Parent',record,'Style','pushbutton','String',...
                 'Record','FontSize',14,'Enable','off'); 
@@ -135,8 +135,9 @@ classdef OTView < most.Gui
                 'FontSize',10,'Value',1);
 
             % Ö¡ÂÊÏÔÊ¾
-            obj.FrameRate = uicontrol('style','text','String','FrameRate', ...
-                                    'Units','normalized');
+            Framerate = most.gui.uiflowcontainer('Parent', camLiveFlow,'FlowDirection','RightToLeft');
+            obj.GUI.FrameRate = uicontrol('Parent',Framerate,'style','text','String','FrameRate', ...
+                                    'HorizontalAlignment','Center','FontSize',10);
         end
         %% scanner configuration
         function scanner_configuration(obj,parent,Height)
