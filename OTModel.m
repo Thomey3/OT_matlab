@@ -107,7 +107,7 @@ classdef OTModel < handle
     %% camera config
     methods
         % 预览
-        function bool = campreview(obj)
+        function bool = campreview(obj,framerate)
             try
                 vidRes = get(obj.cam.camera, 'VideoResolution'); % 获取相机分辨率
                 nBands = get(obj.cam.camera, 'NumberOfBands');   % 获取相机的通道数（RGB）
@@ -115,6 +115,7 @@ classdef OTModel < handle
                 warning('off','imaq:preview:typeBiggerThanUINT8'); 
                 %设置preview的自定义更新函数
                 setappdata(hImage,'UpdatePreviewWindowFcn',@mypreview_fcn);
+                setappdata(hImage,'HandleToFrameRateLabel',framerate);
                 
                 preview(obj.cam.camera,hImage);
                 bool = true;

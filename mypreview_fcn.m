@@ -2,13 +2,13 @@ function mypreview_fcn(obj,event,himage)
 % Example update preview window function.
 
 % Get timestamp for frame.
-tstampstr = event.Timestamp;
+FrameRatestr = event.FrameRate;
 
 % Get handle to text label uicontrol.
-ht = getappdata(himage,'HandleToTimestampLabel');
+ht = getappdata(himage,'HandleToFrameRateLabel');
 
 % Set the value of the text label.
-ht.String = tstampstr;
+ht.String = FrameRatestr;
 
 % 假设event.CData是你的720x1280x3图像数据
 imageData = event.Data;

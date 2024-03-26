@@ -133,6 +133,10 @@ classdef OTView < most.Gui
             obj.GUI.contrast_min = uicontrol('Parent',contrast,'Style','edit','Enable','off');
             obj.GUI.autocontrast = uicontrol('Parent',contrast,'Style','checkbox','String','Auto', ...
                 'FontSize',10,'Value',1);
+
+            % Ö¡ÂÊÏÔÊ¾
+            obj.FrameRate = uicontrol('style','text','String','FrameRate', ...
+                                    'Units','normalized');
         end
         %% scanner configuration
         function scanner_configuration(obj,parent,Height)
