@@ -47,7 +47,11 @@ gca.position = [ ((figWidth - imWidth)/2)...
                imWidth imHeight ];
 
 % Set up the update preview window function.
+<<<<<<< HEAD
 setappdata(hImage,'UpdatePreviewWindowFcn',@test);
+=======
+setappdata(hImage,'UpdatePreviewWindowFcn',@mypreview_fcn);
+>>>>>>> 944e85669c800d35bf96b2f3aa3289ee6eb5d1f4
 
 % Make handle to text label available to update function.
 setappdata(hImage,'HandleToTimestampLabel',hTextLabel);

@@ -25,7 +25,7 @@ classdef OTView < most.Gui
 
     methods
         function GUIConstruct(obj,~,~)
-            windowWidth = 1900;
+            windowWidth = 1250;
             windowHeight = 950;
             main_position = obj.get_windows_size(windowWidth,windowHeight);
             obj.GUI.main = figure('MenuBar','none','Position',main_position ,'Resize','on',...

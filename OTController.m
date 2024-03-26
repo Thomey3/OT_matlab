@@ -131,19 +131,29 @@ classdef OTController < handle
          
         function callback_xROI_offset(obj,~,~)
             obj.hOTmodel.change_x_offset(obj.hOTView.GUI.xROI_offset.String);
+            obj.hOTmodel.stop_preview;
+            obj.hOTmodel.campreview;
         end
         function callback_xROI_width(obj,~,~)
             obj.width = str2double(obj.hOTView.GUI.xROI_width.String);
+%             set(obj.hOTView.GUI.ViewAxes,'Position',[obj.width/4,obj.height/4,obj.width,obj.height]);
+%             image(zeros(obj.width,obj.height),'Parent',obj.hOTView.GUI.ViewAxes);
             obj.hOTmodel.change_x_width(obj.width);
-            image(zeros(obj.width,obj.height),'Parent',obj.hOTView.GUI.ViewAxes);
+            obj.hOTmodel.stop_preview;
+            obj.hOTmodel.campreview;
         end
         function callback_yROI_offset(obj,~,~)
             obj.hOTmodel.change_y_offset(obj.hOTView.GUI.yROI_offset.String);
+            obj.hOTmodel.stop_preview;
+            obj.hOTmodel.campreview;
         end
         function callback_yROI_height(obj,~,~)
             obj.height = str2double(obj.hOTView.GUI.yROI_height.String);
+%             set(obj.hOTView.GUI.ViewAxes,'Position',[obj.width/4,obj.height/4,obj.width,obj.height]);
+%             image(zeros(obj.width,obj.height),'Parent',obj.hOTView.GUI.ViewAxes);
             obj.hOTmodel.change_y_height(obj.height);
-            image(zeros(obj.width,obj.height),'Parent',obj.hOTView.GUI.ViewAxes);
+            obj.hOTmodel.stop_preview;
+            obj.hOTmodel.campreview;
         end
         
 %%% »¹Ã»Ð´Íê
