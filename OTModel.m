@@ -151,10 +151,10 @@ classdef OTModel < handle
         function record(obj,frame,FrameRate)
             startPath = './'; % 定义起始路径
             basePath  = uigetdir(startPath, '请选择保存文件的路径');
-            numFrames = str2double(frame);
-            savecount = FrameRate/10; % 待定
+            numFrames = frame;
+            savecount = floor(FrameRate/10); % 待定
             count = floor(numFrames/savecount);
-            remainder = rem(numFrames,savecount);
+            remainder = numFrames-savecount*count;
             for num = 1:count
                 obj.cam.camera.FramesPerTrigger = savecount;
                 start(obj.cam.camera);
@@ -179,9 +179,10 @@ classdef OTModel < handle
                 stop(obj.cam.camera);
                 recording1 = getdata(obj.cam.camera, remainder);
                 baseFileName = 'Frame_';
-                for i = count*savecount+1:count*10+remainder
+                for i = 1:reainder
+                    filenum = count*savecount + i; 
                     % 创建文件名
-                    fileName = [basePath,'/', baseFileName, num2str(i), '.tif'];
+                    fileName = [basePath,'/', baseFileName, num2str(filenum), '.tif'];
                     % 提取第i帧
                     frame = recording1(:,:,:,i);
                     imwrite(frame, fileName, 'tif');
@@ -198,24 +199,24 @@ classdef OTModel < handle
         function change_x_offset(obj,x_offset)
             obj.X_offset =  str2double(x_offset);
             obj.cam.camerasrc.H1HardwareROI_X_Offset = obj.X_offset;
-            obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
+            %obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
             
         end
         function change_x_width(obj,x_width)
             obj.ROIwidth = x_width;
             obj.cam.camerasrc.H2HardwareROI_Width = obj.ROIwidth;
-            obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
+            %obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
         end
         % 改高度
         function change_y_offset(obj,y_offset)
             obj.Y_offset =  str2double(y_offset);
             obj.cam.camerasrc.H4HardwareROI_Y_Offset = obj.Y_offset;
-            obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
+            %obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
         end
         function change_y_height(obj,y_height)
             obj.ROIheight = y_height;
             obj.cam.camerasrc.H5HardwareROI_Height = obj.ROIheight;
-            obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
+            %obj.cam.camera.ROIPosition = [obj.X_offset obj.Y_offset obj.ROIwidth obj.ROIheight];
         end
     end
     

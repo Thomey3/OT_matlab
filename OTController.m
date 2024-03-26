@@ -123,7 +123,7 @@ classdef OTController < handle
         
         function callback_record(obj,~,~)
             t = obj.convertToSeconds(obj.hOTView.GUI.record_frame.String);
-            FrameRate = str2double(obj.hOTView.GUI.FrameRate.String);
+            FrameRate = obj.FPSconvertNum(obj.hOTView.GUI.FrameRate.String);
             frame = floor(t * FrameRate);
             obj.hOTmodel.record(frame,FrameRate);
         end
@@ -134,29 +134,29 @@ classdef OTController < handle
          
         function callback_xROI_offset(obj,~,~)
             obj.hOTmodel.change_x_offset(obj.hOTView.GUI.xROI_offset.String);
-            obj.hOTmodel.stop_preview;
-            obj.hOTmodel.campreview;
+%             obj.hOTmodel.stop_preview;
+%             obj.hOTmodel.campreview;
         end
         function callback_xROI_width(obj,~,~)
             obj.width = str2double(obj.hOTView.GUI.xROI_width.String);
 %             set(obj.hOTView.GUI.ViewAxes,'Position',[obj.width/4,obj.height/4,obj.width,obj.height]);
 %             image(zeros(obj.width,obj.height),'Parent',obj.hOTView.GUI.ViewAxes);
             obj.hOTmodel.change_x_width(obj.width);
-            obj.hOTmodel.stop_preview;
-            obj.hOTmodel.campreview;
+%             obj.hOTmodel.stop_preview;
+%             obj.hOTmodel.campreview;
         end
         function callback_yROI_offset(obj,~,~)
             obj.hOTmodel.change_y_offset(obj.hOTView.GUI.yROI_offset.String);
-            obj.hOTmodel.stop_preview;
-            obj.hOTmodel.campreview;
+%             obj.hOTmodel.stop_preview;
+%             obj.hOTmodel.campreview;
         end
         function callback_yROI_height(obj,~,~)
             obj.height = str2double(obj.hOTView.GUI.yROI_height.String);
 %             set(obj.hOTView.GUI.ViewAxes,'Position',[obj.width/4,obj.height/4,obj.width,obj.height]);
 %             image(zeros(obj.width,obj.height),'Parent',obj.hOTView.GUI.ViewAxes);
             obj.hOTmodel.change_y_height(obj.height);
-            obj.hOTmodel.stop_preview;
-            obj.hOTmodel.campreview;
+%             obj.hOTmodel.stop_preview;
+%             obj.hOTmodel.campreview;
         end
         
 %%% 还没写完
@@ -238,7 +238,7 @@ classdef OTController < handle
    end
 
    methods
-        function totalSeconds = convertToSeconds(timeStr)
+        function totalSeconds = convertToSeconds(obj,timeStr)
             % 定义正则表达式以找到小时、分钟和秒
             hourPattern = '(?<hour>\d+)h';
             minutePattern = '(?<minute>\d+)m';
@@ -266,6 +266,18 @@ classdef OTController < handle
             
             % 计算总秒数
             totalSeconds = hours * 3600 + minutes * 60 + seconds;
+        end
+        function FPS = FPSconvertNum(obj,FPSstr)
+            pattern = '(\d+(\.\d+)?)\s*FPS';
+            % 使用regexp提取匹配的数字
+            matches = regexp(FPSstr, pattern, 'tokens');
+            % 检查是否找到匹配项并转换为数字
+            if ~isempty(matches)
+                FPS = str2double(matches{1});
+            else
+                FPS = []; % 没有找到匹配项
+            end
+
         end
    end
 end
