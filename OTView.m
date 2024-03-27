@@ -72,7 +72,7 @@ classdef OTView < most.Gui
             obj.GUI.scanner_connect = uicontrol('Parent',scanner_connectFlow,'Style','checkbox','String','connect', ...
                 'FontSize',14);
             scanner_text = uicontrol('Parent',scanner_connectFlow,'Style','text','Enable','on','String', ...
-                'scanner:','FontSize',14);
+                'DAQ:','FontSize',14);
             set(scanner_connectFlow,'HeightLimits',[25,25]);
         end
        %% camera configuration

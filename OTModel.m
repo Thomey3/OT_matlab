@@ -15,6 +15,8 @@ classdef OTModel < handle
         interval = 0.5 % 默认值
         scanmode = "contiunous"
         lh
+        writecomplete = false
+        scandata = []
         % ROI
         Path
         hOTROI
@@ -82,6 +84,12 @@ classdef OTModel < handle
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
+
+                addinput(obj.DAQ,"dev1","ai1","voltage");
+                
+
+                listener = addlistener(s, 'GenerationComplete', @(~, ~)obj.stopReading(obj));
+
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
@@ -544,6 +552,8 @@ classdef OTModel < handle
             stop(obj.DAQ);
             try
                 start(obj.DAQ,Scanmode)
+                startPath = './'; % 定义起始路径
+                basePath  = uigetdir(startPath, '请选择保存文件的路径');
             catch
                 obj.addlog(' optical tweezers did not start');
             end
@@ -551,9 +561,20 @@ classdef OTModel < handle
             try
                 write(obj.DAQ,scanpath);
                 obj.addlog(' optical tweezers is running');
+                obj.writecomplete = false;
+                while obj.writecomplete == false
+                    obj.scandata = [read(obj.DAQ),obj.scandata];
+                end
+                t = get_time;
+                writematrix(obj.scandata, [startPath,basePath,'/',t,'.csv']);
+                obj.scandata = [];
             catch
                 obj.addlog(' Write failed ');
             end
+        end
+
+        function stopReading(obj)
+            obj.writecomplete = true;
         end
     end
     
