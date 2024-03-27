@@ -155,7 +155,7 @@ classdef OTView < most.Gui
             % 速度调节
             velocityFlow = most.gui.uiflowcontainer('Parent', ScannerFlow,'FlowDirection','RightToLeft');
             obj.GUI.scanner_velocity = uicontrol('Parent',velocityFlow,'Style','edit','Enable','off');
-            uicontrol('Parent',velocityFlow,'Style','text','String','Velocity:','HorizontalAlignment','Center',...
+            uicontrol('Parent',velocityFlow,'Style','text','String','Duration:','HorizontalAlignment','Center',...
                 'FontSize',10);
             
             % 路径添加模式

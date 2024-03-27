@@ -17,6 +17,8 @@ classdef OTModel < handle
         lh
         writecomplete = false
         scandata = []
+        x_num = 0
+        y_num = 0
         % ROI
         Path
         hOTROI
@@ -84,12 +86,8 @@ classdef OTModel < handle
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
-
                 addinput(obj.DAQ,"dev1","ai1","voltage");
-                
-
-                listener = addlistener(s, 'GenerationComplete', @(~, ~)obj.stopReading(obj));
-
+                addlistener(obj.DAQ, 'GenerationComplete', @(~, ~)obj.stopReading(obj));
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
@@ -417,6 +415,8 @@ classdef OTModel < handle
                     ww = abs(point2(2) - point1(2)); % ylength of rectangle
                     lll = floor(ll/density); % x point number
                     www = floor(ww/density);% y point number
+                    obj.x_num = lll;
+                    obj.y_num = www;
                     % 初始化点集数组
                     sPoints = zeros(floor(lll*www), 2);
                     % 计算x和y方向上的步进间隔
@@ -526,12 +526,20 @@ classdef OTModel < handle
         % 扫描整个路径
         function scan_path(obj)
             try
-                obj.voltage_data = [obj.curve1(obj.hOTROI(:,1)),obj.curve2(obj.hOTROI(:,2))];
-                obj.addlog('voltage_data ready');
-                obj.DAQ.Rate = obj.velocity;
-                time = line/obj.velocity;
-                obj.addlog(['time : ',num2str(time)]);
-                obj.scan();
+                if strcmp(obj.scanpath,'rectangle_in')
+                    for i = 1:obj.y_num
+                        x1 = (i-1)*obj.x_num + 1;
+                        x2 = i * obj.x_num;
+                        obj.voltage_data = [obj.curve1(obj.hOTROI(x1:x2,1)),obj.curve2(obj.hOTROI(x1:x2,2))];
+                        obj.DAQ.Rate = obj.velocity;
+                        obj.scan();
+                    end
+                else
+                    obj.voltage_data = [obj.curve1(obj.hOTROI(:,1)),obj.curve2(obj.hOTROI(:,2))];
+                    obj.addlog('voltage_data ready');
+                    obj.DAQ.Rate = obj.velocity;
+                    obj.scan();
+                end
             catch
                 if isempty(obj.hOTROI)
                     obj.addlog('path is empty');
