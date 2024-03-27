@@ -185,7 +185,7 @@ classdef OTController < handle
         %% scanner controller
    methods
         function callback_calibration(obj,~,~)
-            calibrate = obj.hOTmodel.calibration;
+            calibrate = obj.hOTmodel.calibration(obj.hOTView.GUI.ViewAxes);
             if calibrate == true
                 obj.enable_scanner('on');
             end

@@ -12,7 +12,7 @@ ht.String = FrameRatestr;
 
 % 假设event.CData是你的720x1280x3图像数据
 imageData = event.Data;
-
+% max(max(imageData))
 % 使用imadjust函数调整对比度
 % 这里的[0.2 0.8]是输入强度范围（可以根据需要调整这些值）
 % [0 1]是输出强度范围
@@ -24,5 +24,5 @@ adjustedImageData = imadjust(imageData);
 
 
 % Display image data.
-himage.CData = adjustedImageData;
+himage.CData = imageData;
 end

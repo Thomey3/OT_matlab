@@ -166,7 +166,7 @@ classdef OTView < most.Gui
             
             % É¨ÃèÂ·¾¶
             scanpathFlow = most.gui.uiflowcontainer('Parent', ScannerFlow,'FlowDirection','RightToLeft');
-            obj.GUI.scanpath = uicontrol('Parent',scanpathFlow,'Style','popupmenu','Enable','off', 'String',{'line','point'});
+            obj.GUI.scanpath = uicontrol('Parent',scanpathFlow,'Style','popupmenu','Enable','off', 'String',{'line','point','rectangle_in'});
             uicontrol('Parent',scanpathFlow,'Style','text','String','Path:','HorizontalAlignment','Center',...
                 'FontSize',10);
             
@@ -178,7 +178,7 @@ classdef OTView < most.Gui
             
             % É¨Ãè·½Ê½
             scanmodeFlow = most.gui.uiflowcontainer('Parent', ScannerFlow,'FlowDirection','RightToLeft');
-            obj.GUI.scanmode = uicontrol('Parent',scanmodeFlow,'Style','popupmenu','Enable','off', 'String',{'contiuous','repeatoutput'});
+            obj.GUI.scanmode = uicontrol('Parent',scanmodeFlow,'Style','popupmenu','Enable','off', 'String',{'Continuous','RepeatOutput'});
             uicontrol('Parent',scanmodeFlow,'Style','text','String','ScanMode:','HorizontalAlignment','Center',...
                 'FontSize',10);
             

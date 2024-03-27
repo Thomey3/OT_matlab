@@ -17,6 +17,7 @@ classdef OTModel < handle
         lh
         writecomplete = false
         scandata = []
+        timetable = []
         x_num = 0
         y_num = 0
         % ROI
@@ -82,20 +83,19 @@ classdef OTModel < handle
         
         % 连接DAQ
         function bool = connect_daq(obj)
-            try
+%             try
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
                 addinput(obj.DAQ,"dev1","ai1","voltage");
-                addlistener(obj.DAQ, 'GenerationComplete', @(~, ~)obj.stopReading(obj));
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
                 obj.addlog(' You should calibrate before using scanner');
-            catch
-                bool = false;
-                obj.addlog(' DAQ connect failed');
-            end
+%             catch
+%                 bool = false;
+%                 obj.addlog(' DAQ connect failed');
+%             end
         end
         
         % 断开DAQ
@@ -297,7 +297,7 @@ classdef OTModel < handle
             s.yimgstack = yimgstack;
         end
         % 仿射变换
-        function [w,center,curve1,curve2] = slope(ximgstack,yimgstack,axes)
+        function [w,center,curve1,curve2] = slope(obj,ximgstack,yimgstack,axes)
             PointNumberx = size(ximgstack,4);
             PointNumbery = size(yimgstack,4);
             a = zeros(PointNumberx,2);
@@ -355,17 +355,17 @@ classdef OTModel < handle
             save('data.mat','w','center','curve1','curve2')
         end
         % calibration
-        function bool = calibration(obj)
+        function bool = calibration(obj,axes)
             obj.addlog('calibrate start');
-            try
-                s = obj.CaliImgAcqui(obj);
-                [obj.w,obj.center,obj.curve1,obj.curve2] = slope(s.ximgstack,s.yimgstack,axes);
+%             try
+                s = obj.CaliImgAcqui;
+                [obj.w,obj.center,obj.curve1,obj.curve2] = obj.slope(s.ximgstack,s.yimgstack,axes);
                 bool = true;
                 obj.addlog('calibrate success');
-            catch
-                bool = false;
-                obj.addlog('calibrate failed');
-            end
+%             catch
+%                 bool = false;
+%                 obj.addlog('calibrate failed');
+%             end
         end
         % velocity (这里可以尝试一下让他在扫的时候可以直接调整)
         function getvelocity(obj,v)
@@ -438,16 +438,14 @@ classdef OTModel < handle
                     end
                     position = [sPoints(:,1),sPoints(:,2)];
             end
-            [x,y] = corrdinate_transformation(position(2),position(1),obj.w,obj.center);
+            [x,y] = corrdinate_transformation(position(:,2),position(:,1),obj.w,obj.center);
             pathpoint = [x,y];
             switch Mode
-                case 'Single'
+                case 'single'
                     obj.hOTROI = [obj.hOTROI;pathpoint];
                     obj.hOTSP = [obj.hOTSP;pathpoint(1,:)];
                     obj.lenth = size(pathpoint,1);
-                    obj.OTPath_inf.lenth = [obj.OTPath_inf.lenth,obj.lenth];
-                    method_num = 1;
-                case 'Multiple'
+                case 'multiple'
                     l = size(pathpoint,1) - size(obj.multiple_position_x,1);
                     if l > 0 && ~isempty(obj.multiple_position_x)        
                         obj.multiple_position_x = padarray(obj.multiple_position_x,[l,0],'replicate','post');
@@ -459,18 +457,13 @@ classdef OTModel < handle
                     end
                     obj.multiple_position_x = [obj.multiple_position_x,pathpoint(:,1)];
                     obj.multiple_position_y = [obj.multiple_position_y,pathpoint(:,2)];
-                    method_num = 2;
-                case 'Return'
+                case 'return'
                     position_fz = flipud(pathpoint);
                     position_new = vertcat(pathpoint,position_fz);
                     obj.hOTROI = [obj.hOTROI;position_new];
                     obj.hOTSP = [obj.hOTSP;position_new(1,:)];
                     obj.lenth = size(position_new,1);
-                    obj.OTPath_inf.lenth = [obj.OTPath_inf.lenth,obj.lenth];
-                    method_num = 4;
             end
-                obj.OTPath_inf.number = size(obj.Path,2);
-                obj.OTPath_inf.method = [obj.OTPath_inf.method,method_num];
         end
         % finish 
         function Finish(obj)
@@ -495,6 +488,7 @@ classdef OTModel < handle
             else
                 obj.addlog('multiple_position is empty');
             end
+            
         end
         % Delete
         function Delete(obj)
@@ -527,24 +521,30 @@ classdef OTModel < handle
         function scan_path(obj)
             try
                 if strcmp(obj.scanpath,'rectangle_in')
+                    startPath = './'; % 定义起始路径
+                    basePath  = uigetdir(startPath, '请选择保存文件的路径');
                     for i = 1:obj.y_num
                         x1 = (i-1)*obj.x_num + 1;
                         x2 = i * obj.x_num;
                         obj.voltage_data = [obj.curve1(obj.hOTROI(x1:x2,1)),obj.curve2(obj.hOTROI(x1:x2,2))];
-                        obj.DAQ.Rate = obj.velocity;
+                        line = size(obj.voltage_data,1);
+                        obj.DAQ.Rate = line /obj.velocity;
                         obj.scan();
+                        t = obj.get_time;
+                        writetimetable(obj.scandata, [basePath,'\',t,'.txt'],'Encoding', 'UTF-8');
                     end
+                    obj.addlog('complete ready');
                 else
                     obj.voltage_data = [obj.curve1(obj.hOTROI(:,1)),obj.curve2(obj.hOTROI(:,2))];
                     obj.addlog('voltage_data ready');
-                    obj.DAQ.Rate = obj.velocity;
+                    obj.DAQ.Rate = size(obj.voltage_data,1)/obj.velocity;
                     obj.scan();
                 end
             catch
                 if isempty(obj.hOTROI)
                     obj.addlog('path is empty');
                 else
-                    obj.addlog('scan_startpoint failed');
+                    obj.addlog('scan path failed');
                 end
             end
         end
@@ -559,23 +559,20 @@ classdef OTModel < handle
             Scanmode = obj.scanmode;
             stop(obj.DAQ);
             try
-                start(obj.DAQ,Scanmode)
-                startPath = './'; % 定义起始路径
-                basePath  = uigetdir(startPath, '请选择保存文件的路径');
+                start(obj.DAQ,'continuous')
             catch
                 obj.addlog(' optical tweezers did not start');
             end
 
             try
+                try
+                    flush(obj.DAQ);
+                catch
+                    obj.addlog('Flushed acquired data.');
+                end
                 write(obj.DAQ,scanpath);
                 obj.addlog(' optical tweezers is running');
-                obj.writecomplete = false;
-                while obj.writecomplete == false
-                    obj.scandata = [read(obj.DAQ),obj.scandata];
-                end
-                t = get_time;
-                writematrix(obj.scandata, [startPath,basePath,'/',t,'.csv']);
-                obj.scandata = [];
+                obj.scandata= read(obj.DAQ,ceil(obj.velocity * obj.DAQ.Rate));
             catch
                 obj.addlog(' Write failed ');
             end
