@@ -2,19 +2,18 @@ classdef OTModel < handle
     properties
         % camera
         cam
-        
+        a
         X_offset = 0
         Y_offset = 0
         ROIwidth = 2048
         ROIheight = 2048
         % DAQ
         DAQ
-        aiDAQ
         velocity = 30 % 默认值
         mode = "single"
         scanpath = "line"
         interval = 0.5 % 默认值
-        scanmode = "Continuous"
+        scanmode = "contiunous"
         lh
         writecomplete = false
         scandata = []
@@ -84,21 +83,19 @@ classdef OTModel < handle
         
         % 连接DAQ
         function bool = connect_daq(obj)
-            try
+%             try
                 obj.DAQ = daq('ni');
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
-                obj.aiDAQ = daq('ni');
-                addinput(obj.aiDAQ,"dev1","ai1","voltage");
-                obj.aiDAQ.Rate = 1250000;
+                addinput(obj.DAQ,"dev1","ai1","voltage");
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
                 obj.addlog(' You should calibrate before using scanner');
-            catch
-                bool = false;
-                obj.addlog(' DAQ connect failed');
-            end
+%             catch
+%                 bool = false;
+%                 obj.addlog(' DAQ connect failed');
+%             end
         end
         
         % 断开DAQ
@@ -413,51 +410,9 @@ classdef OTModel < handle
                     point2 = obj.Path(end).Vertices(2,:);
                     point3 = obj.Path(end).Vertices(3,:);
                     point4 = obj.Path(end).Vertices(4,:);
-                    % 想要在每个方向上的点数
-                    nPointsX = Interval; % X方向上的点数
-                    nPointsY = Interval; % Y方向上的点数，假设和X方向相同
-
-                    obj.x_num = nPointsX;
-                    obj.y_num = nPointsY;
-
-                    
-                    % 计算矩形的长和宽
-                    ll = abs(point4(1) - point1(1)); % 矩形的长度
-                    ww = abs(point2(2) - point1(2)); % 矩形的宽度
-                    
-                    % 计算间隔
-                    densityX = ll / (nPointsX - 1); % X方向上的间隔
-                    densityY = ww / (nPointsY - 1); % Y方向上的间隔，假设和X方向间隔相同
-                    
-                    % 初始化点集数组
-                    sPoints = zeros(nPointsX * nPointsY, 2);
-                    
-                    % 生成点阵
-                    for i = 0:nPointsY-1
-                        for j = 0:nPointsX-1
-                            if mod(i, 2) == 0
-                                % 偶数行：从左到右
-                                x = point1(1) + j*densityX;
-                            else
-                                % 奇数行：从右到左
-                                x = point1(1) + (nPointsX-1-j)*densityX;
-                            end
-                            y = point1(2) + i*densityY;
-                            sPoints(i*nPointsX+j+1, :) = [x, y];
-                        end
-                    end
-                    
-                    position = [sPoints(:,1),sPoints(:,2)];
-                case 'rectangle'
-                    obj.Path = [obj.Path, drawrectangle(axes,'Color','r','InteractionsAllowed','none')];
-                    point1 = obj.Path(end).Vertices(1,:);
-                    point2 = obj.Path(end).Vertices(2,:);
-                    point3 = obj.Path(end).Vertices(3,:);
-                    point4 = obj.Path(end).Vertices(4,:);
                     density = Interval;
                     ll = abs(point4(1) - point1(1)); % xlength of rectangle
                     ww = abs(point2(2) - point1(2)); % ylength of rectangle
-                    obj.addlog(['x: ',num2str(ll),' y: ',num2str(ww)]);
                     lll = floor(ll/density); % x point number
                     www = floor(ww/density);% y point number
                     obj.x_num = lll;
@@ -482,7 +437,7 @@ classdef OTModel < handle
                         end
                     end
                     position = [sPoints(:,1),sPoints(:,2)];
-                end
+            end
             [x,y] = corrdinate_transformation(position(:,2),position(:,1),obj.w,obj.center);
             pathpoint = [x,y];
             switch Mode
@@ -576,7 +531,7 @@ classdef OTModel < handle
                         obj.DAQ.Rate = line /obj.velocity;
                         obj.scan();
                         t = obj.get_time;
-                        writetimetable(obj.scandata, [basePath,'\',t,num2str(obj.DAQ.Rate),'.txt'],'Encoding', 'UTF-8');
+                        writetimetable(obj.scandata, [basePath,'\',t,'.txt'],'Encoding', 'UTF-8');
                     end
                     obj.addlog('complete ready');
                 else
@@ -617,7 +572,7 @@ classdef OTModel < handle
                 end
                 write(obj.DAQ,scanpath);
                 obj.addlog(' optical tweezers is running');
-                obj.scandata= read(obj.aiDAQ,ceil(obj.velocity * obj.DAQ.Rate));
+                obj.scandata= read(obj.DAQ,ceil(obj.velocity * obj.DAQ.Rate));
             catch
                 obj.addlog(' Write failed ');
             end
