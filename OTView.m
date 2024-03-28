@@ -210,8 +210,10 @@ classdef OTView < most.Gui
         function make_log_panel(obj,parent)
             hlogPanel = uipanel('Parent',parent);
             hlogFlow = most.gui.uiflowcontainer('Parent', hlogPanel,'FlowDirection','TopDown');
-            obj.GUI.log = uicontrol('Parent',hlogFlow,'Style','text','HorizontalAlignment',...
-                'left','BackgroundColor',[1,1,1],'FontSize',10);
+            obj.GUI.log = uicontrol('Parent', hlogFlow, 'Style', 'edit', 'HorizontalAlignment', ...
+                'left', 'BackgroundColor', [1, 1, 1], 'FontSize', 10, ...
+                'Max', 2, 'Min', 0, 'Enable', 'inactive'); % Max > Min使其支持多行文本，'Enable', 'inactive'使文本不可编辑但可滚动
+
         end
     end
 
