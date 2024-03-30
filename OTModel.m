@@ -76,7 +76,7 @@ classdef OTModel < handle
         function disconnect_cam(obj)
             try
                 delete(obj.cam.camera)
-                obj.addlog(' Camera disconnected');
+                obj.addlog(' Camera disconnected');  
             catch
                 obj.addlog(' Camera disconnected failed');
             end
@@ -89,8 +89,8 @@ classdef OTModel < handle
                 addoutput(obj.DAQ,"dev1","ao0","voltage");
                 addoutput(obj.DAQ,"dev1","ao1","voltage");
                 obj.aiDAQ = daq('ni');
-                addinput(obj.aiDAQ,"dev1","ai1","voltage");
-                obj.aiDAQ.Rate = 1250000;
+                addinput(obj.aiDAQ,"dev2","ai8","voltage");
+                obj.aiDAQ.Rate = 2000000;
                 bool = true;
                 obj.addlog(' DAQ connected');
                 obj.addlog(' Calibration requires camera living');
@@ -576,6 +576,8 @@ classdef OTModel < handle
                         line = size(obj.voltage_data,1);
                         obj.DAQ.Rate = line /obj.velocity;
                         obj.scan();
+                        figure(1);
+                        plot(obj.scandata.Time,obj.scandata.Dev2_ai8);
                         writetimetable(obj.scandata, [basePath,'\',num2str(i),'-',num2str(obj.aiDAQ.Rate),'-',num2str(line),'.txt'],'Encoding', 'UTF-8');
                         pause(obj.velocity);
                     end
@@ -612,14 +614,18 @@ classdef OTModel < handle
             end
 
             try
+                if isempty(gcp('nocreate'))
+                    parpool;
+                end
                 try
                     flush(obj.DAQ);
                 catch
                     obj.addlog('Flushed acquired data.');
                 end
                 write(obj.DAQ,scanpath);
-                obj.addlog(' optical tweezers is running');
                 obj.scandata= read(obj.aiDAQ,ceil(obj.velocity * obj.aiDAQ.Rate));
+                obj.addlog(' optical tweezers is running');
+
             catch
                 obj.addlog(' Write failed ');
             end
